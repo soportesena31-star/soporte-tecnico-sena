@@ -2,7 +2,7 @@ import { useState } from 'react'
 import {
   Home, ListChecks, Briefcase, Bell, User,
   MapPin, Tag, Clock, AlertTriangle, ChevronRight,
-  CheckCircle2, Zap, TrendingUp, ArrowRight, Star, Phone,
+  CheckCircle2, Zap, TrendingUp, ArrowRight, Star,
   Search, CircleDot, Mail
 } from 'lucide-react'
 import { STATUS_COLORS, PRIORITY_COLORS, formatDate, type Case } from '../data/mockData'
@@ -48,6 +48,14 @@ export default function TechnicianDashboard({ techName, techEmail, cases, curren
       c.category.toLowerCase().includes(search.toLowerCase())
     return matchFilter && matchSearch
   })
+
+  // El tab "Mis casos" debe listar UNICAMENTE los casos asignados o tomados por
+  // el tecnico actual, sin importar el filtro que este activo. El tab "Casos"
+  // sigue mostrando la lista completa con los filtros normales.
+  const searchMatch = (c: Case) => !search || c.number.toLowerCase().includes(search.toLowerCase()) ||
+    c.space.name.toLowerCase().includes(search.toLowerCase()) ||
+    c.category.toLowerCase().includes(search.toLowerCase())
+  const visibleCases = tab === 'my-cases' ? myCases.filter(searchMatch) : filteredCases
 
   // Notificaciones derivadas de los casos reales (no hay backend de push todavia,
   // ver README): alta prioridad sin asignar, y casos mios en proceso hace rato.
@@ -235,10 +243,10 @@ export default function TechnicianDashboard({ techName, techEmail, cases, curren
 
           {/* Cases */}
           <div className="px-4 space-y-3">
-            {filteredCases.length === 0 ? (
+            {visibleCases.length === 0 ? (
               <EmptyState message="No hay casos con este filtro" />
             ) : (
-              filteredCases.map(c => (
+              visibleCases.map(c => (
                 <FullCaseCard key={c.id} c={c} onClick={() => onCaseSelect(c)} />
               ))
             )}
@@ -303,7 +311,11 @@ export default function TechnicianDashboard({ techName, techEmail, cases, curren
         ] as { id: Tab; icon: typeof Home; label: string; badge?: number }[]).map(item => (
           <button
             key={item.id}
-            onClick={() => item.id === 'profile' ? setProfileOpen(true) : setTab(item.id)}
+            onClick={() => {
+              if (item.id === 'profile') { setProfileOpen(true); return }
+              setTab(item.id)
+              if (item.id === 'my-cases') setFilter('Mis casos')
+            }}
             className={`flex flex-col items-center gap-0.5 px-3 py-1.5 rounded-xl transition-all ${
               tab === item.id
                 ? 'text-sena-green'
@@ -360,10 +372,6 @@ export default function TechnicianDashboard({ techName, techEmail, cases, curren
 
             {/* Actions */}
             <div className="px-5 space-y-2">
-              <button className="w-full flex items-center gap-3 px-4 py-3.5 rounded-2xl bg-gray-50 hover:bg-gray-100 transition-colors">
-                <Phone size={16} className="text-gray-500" />
-                <span className="text-sm font-semibold text-gray-700">Contactar soporte</span>
-              </button>
               <button onClick={() => { setProfileOpen(false); onLogout() }} className="w-full py-3.5 rounded-2xl border-2 border-red-100 text-red-600 font-bold text-sm hover:bg-red-50 transition-colors">
                 Cerrar sesión
               </button>
