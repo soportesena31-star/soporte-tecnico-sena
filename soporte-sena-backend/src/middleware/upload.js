@@ -88,7 +88,8 @@ function soloImagenes(req, file, cb) {
 const upload = multer({
   storage,
   fileFilter: soloImagenes,
-  limits: { fileSize: 5 * 1024 * 1024 },
+  // Las fotos tomadas con celulares modernos superan facilmente los 5MB.
+  limits: { fileSize: 15 * 1024 * 1024 },
 });
 
 module.exports = upload;
