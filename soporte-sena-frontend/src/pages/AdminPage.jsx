@@ -59,6 +59,11 @@ export default function AdminPage() {
     await cargarTodo()
   }
 
+  const handleUpdateSpace = async (id, { name, type, sede }) => {
+    await api.espacios.actualizar(id, { nombre: name, tipo: tipoEspacioAApi(type), sede })
+    await cargarTodo()
+  }
+
   const handleInvitar = async ({ email, nombre, rol_id }) => {
     const resultado = await api.invitaciones.crear(email, nombre, rol_id)
     return resultado
@@ -122,6 +127,7 @@ export default function AdminPage() {
       historyLog={datos.historyLog}
       roles={datos.roles}
       onCreateSpace={handleCreateSpace}
+      onUpdateSpace={handleUpdateSpace}
       onToggleSpace={handleToggleSpace}
       onInvitar={handleInvitar}
       onAssignCase={handleAssignCase}

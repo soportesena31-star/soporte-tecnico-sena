@@ -4,7 +4,7 @@ import { mapCaso } from '../api/mappers'
 import {
   LayoutDashboard, Ticket, Building2, Users, Tag, BarChart3, History, Settings,
   TrendingUp, Clock, CheckCircle, AlertCircle, RotateCcw, Search, Filter,
-  ChevronDown, ChevronUp, Edit2, ToggleLeft, ToggleRight, Download, LogOut, Menu,
+  ChevronDown, ChevronUp, Edit2, Download, LogOut, Menu,
   Plus, X, Bell, Shield, QrCode, Trash2, Save, Eye, EyeOff,
   ArrowUpRight, ArrowDownRight, Minus, AlertTriangle, UserPlus, Mail
 } from 'lucide-react'
@@ -30,6 +30,7 @@ interface Props {
   historyLog: HistorialItem[]
   roles: { id: string; nombre: string }[]
   onCreateSpace: (data: { name: string; type: string; sede: string }) => Promise<void>
+  onUpdateSpace: (id: string, data: { name: string; type: string; sede: string }) => Promise<void>
   onToggleSpace: (id: string, active: boolean) => Promise<void>
   onInvitar: (data: { email: string; nombre: string; rol_id: string }) => Promise<{ correo_enviado: boolean; motivo?: string }>
   onAssignCase: (caseId: string, tecnicoId: string) => Promise<void>
@@ -53,7 +54,7 @@ const NAV = [
 
 const CATEGORY_COLORS = ['#39A900', '#2563EB', '#EF4444', '#8B5CF6', '#F59E0B', '#06B6D4', '#9333EA', '#EA580C']
 
-export default function AdminDashboard({ onLogout, adminName, cases, spaces, technicians, categories, historyLog, roles, onCreateSpace, onToggleSpace, onInvitar, onAssignCase, onEditarTecnico, onCrearCategoria, onEditarCategoria, onEliminarCategoria }: Props) {
+export default function AdminDashboard({ onLogout, adminName, cases, spaces, technicians, categories, historyLog, roles, onCreateSpace, onUpdateSpace, onToggleSpace, onInvitar, onAssignCase, onEditarTecnico, onCrearCategoria, onEditarCategoria, onEliminarCategoria }: Props) {
   const [section, setSection] = useState<Section>('dashboard')
   const [sidebarOpen, setSidebarOpen] = useState(false)
   const [tecnicoFiltro, setTecnicoFiltro] = useState<string | null>(null)
@@ -202,7 +203,7 @@ export default function AdminDashboard({ onLogout, adminName, cases, spaces, tec
         <div className="flex-1 p-4 lg:p-6 overflow-auto">
           {section === 'dashboard' && <DashboardSection metrics={metrics} cases={cases} onNavigate={s => setSection(s)} />}
           {section === 'cases' && <CasesSection cases={cases} technicians={technicians} onAssignCase={onAssignCase} tecnicoFilter={tecnicoFiltro} onTecnicoFilterChange={setTecnicoFiltro} />}
-          {section === 'spaces' && <SpacesSection spaces={spaces} cases={cases} onCreateSpace={onCreateSpace} onToggleSpace={onToggleSpace} />}
+          {section === 'spaces' && <SpacesSection spaces={spaces} cases={cases} onCreateSpace={onCreateSpace} onUpdateSpace={onUpdateSpace} onToggleSpace={onToggleSpace} />}
           {section === 'technicians' && <TechniciansSection technicians={technicians} cases={cases} roles={roles} onInvitar={onInvitar} onEditarTecnico={onEditarTecnico} onVerCasos={(id) => { setTecnicoFiltro(id); setSection('cases') }} />}
           {section === 'categories' && <CategoriesSection categories={categories} onCrear={onCrearCategoria} onEditar={onEditarCategoria} onEliminar={onEliminarCategoria} />}
           {section === 'reports' && <ReportsSection technicians={technicians} categories={categories} />}
@@ -866,7 +867,7 @@ function AssignSelect({ caso, technicians, onAssign }: {
 /* ══════════════════════════════════════════
    SPACES
 ══════════════════════════════════════════ */
-function SpacesSection({ spaces, cases, onCreateSpace, onToggleSpace }: { spaces: Space[]; cases: Case[]; onCreateSpace: Props['onCreateSpace']; onToggleSpace: Props['onToggleSpace'] }) {
+function SpacesSection({ spaces, cases, onCreateSpace, onUpdateSpace, onToggleSpace }: { spaces: Space[]; cases: Case[]; onCreateSpace: Props['onCreateSpace']; onUpdateSpace: Props['onUpdateSpace']; onToggleSpace: Props['onToggleSpace'] }) {
   const [search, setSearch] = useState('')
   const [typeFilter, setTypeFilter] = useState('Todos')
   const [showModal, setShowModal] = useState(false)
@@ -874,13 +875,34 @@ function SpacesSection({ spaces, cases, onCreateSpace, onToggleSpace }: { spaces
   const [newType, setNewType] = useState('Ambiente')
   const [newSede, setNewSede] = useState('CEET')
   const [saving, setSaving] = useState(false)
+  const [editing, setEditing] = useState<Space | null>(null)
+  const [editName, setEditName] = useState('')
+  const [editType, setEditType] = useState('Ambiente')
+  const [editSede, setEditSede] = useState('CEET')
+  const [savingEdit, setSavingEdit] = useState(false)
 
   const filtered = spaces.filter(s =>
     (s.name.toLowerCase().includes(search.toLowerCase()) || s.sede.toLowerCase().includes(search.toLowerCase()))
     && (typeFilter === 'Todos' || s.type === typeFilter)
   )
 
-  const toggle = (id: string, active: boolean) => onToggleSpace(id, !active)
+  const openEdit = (s: Space) => {
+    setEditing(s)
+    setEditName(s.name)
+    setEditType(s.type)
+    setEditSede(s.sede)
+  }
+
+  const saveEdit = async () => {
+    if (!editing || !editName.trim()) return
+    setSavingEdit(true)
+    try {
+      await onUpdateSpace(editing.id, { name: editName, type: editType, sede: editSede })
+      setEditing(null)
+    } finally {
+      setSavingEdit(false)
+    }
+  }
 
   const addSpace = async () => {
     if (!newName.trim()) return
@@ -957,12 +979,9 @@ function SpacesSection({ spaces, cases, onCreateSpace, onToggleSpace }: { spaces
                     </span>
                   </td>
                   <td className="px-5 py-3.5">
-                    <div className="flex items-center gap-3 opacity-0 group-hover:opacity-100 transition-opacity">
-                      <button className="text-gray-400 hover:text-sena-green transition-colors"><Edit2 size={14} /></button>
-                      <button onClick={() => toggle(s.id, s.active)} className={`transition-colors ${s.active ? 'text-green-500 hover:text-gray-400' : 'text-gray-300 hover:text-green-500'}`}>
-                        {s.active ? <ToggleRight size={20} /> : <ToggleLeft size={20} />}
-                      </button>
-                    </div>
+                    <button onClick={() => openEdit(s)} className="text-gray-400 hover:text-sena-green transition-colors" aria-label={`Editar ${s.name}`}>
+                      <Edit2 size={16} />
+                    </button>
                   </td>
                 </tr>
               )
@@ -997,6 +1016,37 @@ function SpacesSection({ spaces, cases, onCreateSpace, onToggleSpace }: { spaces
             <div className="flex gap-2 mt-5">
               <button onClick={() => setShowModal(false)} disabled={saving} className="flex-1 py-3 rounded-xl border-2 border-gray-100 text-sm font-semibold text-gray-600 hover:bg-gray-50 disabled:opacity-50">Cancelar</button>
               <button onClick={addSpace} disabled={saving} className="flex-1 py-3 rounded-xl bg-sena-green text-white text-sm font-bold hover:bg-sena-dark shadow-md shadow-green-200 disabled:opacity-70">{saving ? 'Creando...' : 'Crear espacio'}</button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Modal editar */}
+      {editing && (
+        <div className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4" onClick={() => setEditing(null)}>
+          <div className="bg-white rounded-3xl p-6 w-full max-w-sm shadow-2xl" onClick={e => e.stopPropagation()}>
+            <div className="flex items-center justify-between mb-5">
+              <h3 className="font-black text-gray-900">Editar espacio</h3>
+              <button onClick={() => setEditing(null)} className="text-gray-400 hover:text-gray-600"><X size={18} /></button>
+            </div>
+            <div className="space-y-4">
+              <FormField label="Nombre del espacio">
+                <input value={editName} onChange={e => setEditName(e.target.value)} placeholder="Ej: Ambiente 301" className="w-full px-4 py-2.5 rounded-xl border-2 border-gray-100 text-sm focus:outline-none focus:border-sena-green" />
+              </FormField>
+              <FormField label="Tipo">
+                <select value={editType} onChange={e => setEditType(e.target.value)} className="w-full px-4 py-2.5 rounded-xl border-2 border-gray-100 text-sm bg-white focus:outline-none focus:border-sena-green">
+                  {['Ambiente', 'Almacén', 'Auditorio', 'Oficina', 'Zona común', 'Otro'].map(t => <option key={t}>{t}</option>)}
+                </select>
+              </FormField>
+              <FormField label="Sede">
+                <select value={editSede} onChange={e => setEditSede(e.target.value)} className="w-full px-4 py-2.5 rounded-xl border-2 border-gray-100 text-sm bg-white focus:outline-none focus:border-sena-green">
+                  {['CEET', 'CMM', 'CMTC', 'CME'].map(s => <option key={s}>{s}</option>)}
+                </select>
+              </FormField>
+            </div>
+            <div className="flex gap-2 mt-5">
+              <button onClick={() => setEditing(null)} disabled={savingEdit} className="flex-1 py-3 rounded-xl border-2 border-gray-100 text-sm font-semibold text-gray-600 hover:bg-gray-50 disabled:opacity-50">Cancelar</button>
+              <button onClick={saveEdit} disabled={savingEdit} className="flex-1 py-3 rounded-xl bg-sena-green text-white text-sm font-bold hover:bg-sena-dark shadow-md shadow-green-200 disabled:opacity-70">{savingEdit ? 'Guardando...' : 'Guardar cambios'}</button>
             </div>
           </div>
         </div>
