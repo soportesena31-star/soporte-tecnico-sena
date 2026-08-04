@@ -19,12 +19,14 @@ export const PRIORIDAD_DISPLAY = {
 };
 
 export const TIPO_ESPACIO_DISPLAY = {
-  aula: 'Aula',
+  aula: 'Ambiente',
   laboratorio: 'Laboratorio',
   auditorio: 'Auditorio',
   oficina: 'Oficina',
   zona_comun: 'Zona común',
   otro: 'Otro',
+  ambiente: 'Ambiente',
+  almacen: 'Almacén',
 };
 
 const TIPO_ESPACIO_API = Object.fromEntries(

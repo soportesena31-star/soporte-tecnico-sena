@@ -18,7 +18,7 @@ Espacio.init({
     allowNull: false,
   },
   tipo: {
-    type: DataTypes.ENUM('aula', 'laboratorio', 'auditorio', 'oficina', 'zona_comun', 'otro'),
+    type: DataTypes.ENUM('aula', 'laboratorio', 'auditorio', 'oficina', 'zona_comun', 'otro', 'ambiente', 'almacen'),
     allowNull: false,
     defaultValue: 'aula',
   },

@@ -1,12 +1,14 @@
 const { body, param } = require('express-validator');
 
+const TIPOS_VALIDOS = ['aula', 'laboratorio', 'auditorio', 'oficina', 'zona_comun', 'otro', 'ambiente', 'almacen'];
+
 const crearEspacioValidator = [
   body('nombre')
     .trim()
     .notEmpty().withMessage('El nombre del espacio es obligatorio')
     .isLength({ max: 100 }).withMessage('El nombre es demasiado largo'),
   body('tipo')
-    .isIn(['aula', 'laboratorio', 'auditorio', 'oficina', 'zona_comun', 'otro'])
+    .isIn(TIPOS_VALIDOS)
     .withMessage('Tipo de espacio inválido'),
   body('sede')
     .optional({ checkFalsy: true })
@@ -27,7 +29,7 @@ const actualizarEspacioValidator = [
     .isLength({ max: 100 }).withMessage('El nombre es demasiado largo'),
   body('tipo')
     .optional({ checkFalsy: true })
-    .isIn(['aula', 'laboratorio', 'auditorio', 'oficina', 'zona_comun', 'otro'])
+    .isIn(TIPOS_VALIDOS)
     .withMessage('Tipo de espacio inválido'),
   body('sede')
     .optional({ checkFalsy: true })

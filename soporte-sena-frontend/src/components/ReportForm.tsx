@@ -17,10 +17,10 @@ interface Props {
   onSubmit: (data: { space?: Space; customLocation?: string; reportedBy: string; category: string; description: string; photoFiles: File[] }) => Promise<void>
 }
 
-const SPACE_TYPES = ['Aulas', 'Laboratorios', 'Auditorios', 'Oficinas', 'Zonas comunes', 'Otros']
+const SPACE_TYPES = ['Ambientes', 'Almacenes', 'Auditorios', 'Oficinas', 'Zonas comunes', 'Otros']
 const TYPE_MAP: Record<string, string> = {
-  'Aulas': 'Aula',
-  'Laboratorios': 'Laboratorio',
+  'Ambientes': 'Ambiente',
+  'Almacenes': 'Almacén',
   'Auditorios': 'Auditorio',
   'Oficinas': 'Oficina',
   'Zonas comunes': 'Zona común',

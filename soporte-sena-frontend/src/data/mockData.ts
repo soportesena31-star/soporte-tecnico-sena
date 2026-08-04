@@ -1,6 +1,6 @@
 export type CaseStatus = 'Abierto' | 'Asignado' | 'En proceso' | 'Resuelto' | 'Cerrado' | 'Reabierto'
 export type Priority = 'Baja' | 'Media' | 'Alta'
-export type SpaceType = 'Aula' | 'Laboratorio' | 'Auditorio' | 'Oficina' | 'Zona común' | 'Otro'
+export type SpaceType = 'Ambiente' | 'Almacén' | 'Auditorio' | 'Oficina' | 'Zona común' | 'Otro'
 export type NoveltyType = 'Equipos de cómputo' | 'Conectividad / Red' | 'Mobiliario' | 'Eléctrico' | 'Audiovisuales' | 'Climatización' | 'Otro'
 
 export interface Space {
