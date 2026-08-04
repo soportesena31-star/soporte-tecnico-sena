@@ -13,13 +13,23 @@ async function crearCaso(req, res, next) {
   const t = await sequelize.transaction();
   try {
     const {
-      espacio_id, categoria_id, reportado_por, descripcion,
+      espacio_id, categoria_id, reportado_por, descripcion, ubicacion_personalizada,
     } = req.body;
 
-    const espacio = await Espacio.findByPk(espacio_id);
-    if (!espacio || espacio.estado !== 'activo') {
+    // El caso apunta a un espacio registrado O a una ubicacion personalizada
+    // ("Otra ubicacion (No listada)" en el formulario). Ambos vacios -> error.
+    if (!espacio_id && !(ubicacion_personalizada && ubicacion_personalizada.trim())) {
       await t.rollback();
-      return errorResponse(res, 400, ERR_ESPACIO_INACTIVO, 'El espacio seleccionado no esta disponible');
+      return errorResponse(res, 400, ERR_VALIDATION, 'Debes seleccionar un espacio o indicar una ubicacion');
+    }
+
+    let espacio = null;
+    if (espacio_id) {
+      espacio = await Espacio.findByPk(espacio_id);
+      if (!espacio || espacio.estado !== 'activo') {
+        await t.rollback();
+        return errorResponse(res, 400, ERR_ESPACIO_INACTIVO, 'El espacio seleccionado no esta disponible');
+      }
     }
 
     const categoria = await Categoria.findByPk(categoria_id);
@@ -46,7 +56,8 @@ async function crearCaso(req, res, next) {
     }
 
     const caso = await Caso.create({
-      espacio_id,
+      espacio_id: espacio_id || null,
+      ubicacion_personalizada: (ubicacion_personalizada && ubicacion_personalizada.trim()) || null,
       categoria_id,
       reportado_por,
       descripcion,
@@ -119,7 +130,7 @@ async function consultarPorNumero(req, res, next) {
       where: { numero_caso: req.params.numero_caso },
       attributes: [
         'id', 'numero_caso', 'estado', 'prioridad', 'descripcion', 'reportado_por',
-        'foto_novedad', 'foto_evidencia', 'notas_resolucion',
+        'foto_novedad', 'foto_evidencia', 'notas_resolucion', 'ubicacion_personalizada',
         'createdAt', 'fecha_asignacion', 'fecha_resolucion', 'veces_reabierto',
       ],
       include: [
