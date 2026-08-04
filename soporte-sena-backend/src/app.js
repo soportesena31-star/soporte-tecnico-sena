@@ -13,6 +13,11 @@ const { ERR_NOT_FOUND } = require('./utils/errorCodes');
 
 const app = express();
 
+// Railway (y la mayoria de PaaS) terminan TLS en su proxy y reenvian la peticion
+// con 'X-Forwarded-For'. Sin esto, express-rate-limit lanza
+// ERR_ERL_UNEXPECTED_X_FORWARDED_FOR y bloquea las rutas limitadas en produccion.
+app.set('trust proxy', 1);
+
 // Seguridad HTTP Headers
 app.use(helmet({
   crossOriginResourcePolicy: { policy: 'cross-origin' }, // Permite cargar imágenes desde frontend local/producción

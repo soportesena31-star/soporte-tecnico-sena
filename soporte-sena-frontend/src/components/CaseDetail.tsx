@@ -1,5 +1,5 @@
 import { useState, useRef } from 'react'
-import { ChevronLeft, MapPin, Tag, User, Camera, CheckCircle2, Plus, AlertTriangle, X, Clock, FileText, UserCheck, ArrowRight, Eye } from 'lucide-react'
+import { ChevronLeft, MapPin, Tag, User, Camera, CheckCircle2, AlertTriangle, X, Clock, FileText, UserCheck, ArrowRight, Eye } from 'lucide-react'
 import { type Case, PRIORITY_COLORS, formatDate } from '../data/mockData'
 import PhotoPicker, { type PhotoItem } from './PhotoPicker'
 import { urlFoto } from '../api/client'
@@ -10,7 +10,6 @@ interface Props {
   onBack: () => void
   onTakeCase: () => Promise<Case>
   onStartWork: () => Promise<Case>
-  onAddNote: (text: string) => Promise<Case>
   onResolve: (evidenceFiles: File[], notasResolucion: string) => Promise<Case>
 }
 
@@ -18,12 +17,10 @@ type LocalStatus = 'Abierto' | 'Asignado' | 'En proceso' | 'Resuelto'
 
 const STATUS_STEPS: LocalStatus[] = ['Abierto', 'Asignado', 'En proceso', 'Resuelto']
 
-export default function CaseDetail({ caseData, techName, onBack, onTakeCase, onStartWork, onAddNote, onResolve }: Props) {
+export default function CaseDetail({ caseData, techName, onBack, onTakeCase, onStartWork, onResolve }: Props) {
   const [caso, setCaso] = useState<Case>(caseData)
-  const [note, setNote] = useState('')
   const [notasResolucion, setNotasResolucion] = useState('')
   const [evidencePhotosList, setEvidencePhotosList] = useState<PhotoItem[]>([])
-  const [noteOpen, setNoteOpen] = useState(false)
   const [resolveError, setResolveError] = useState('')
   const [busy, setBusy] = useState(false)
   const [activeTab, setActiveTab] = useState<'info' | 'history'>('info')
@@ -69,19 +66,6 @@ export default function CaseDetail({ caseData, techName, onBack, onTakeCase, onS
       setCaso(actualizado)
     } catch (err) {
       setResolveError(err instanceof Error ? err.message : 'No se pudo resolver el caso. Intenta de nuevo.')
-    } finally {
-      setBusy(false)
-    }
-  }
-
-  const addNote = async () => {
-    if (!note.trim()) return
-    setBusy(true)
-    try {
-      const actualizado = await onAddNote(note.trim())
-      setCaso(actualizado)
-      setNote('')
-      setNoteOpen(false)
     } finally {
       setBusy(false)
     }
@@ -226,28 +210,6 @@ export default function CaseDetail({ caseData, techName, onBack, onTakeCase, onS
             {/* Actions for En proceso */}
             {status === 'En proceso' && (
               <>
-                {/* Notes */}
-                <div className="bg-white rounded-2xl p-4 border border-gray-100 shadow-sm">
-                  <div className="flex items-center justify-between mb-3">
-                    <p className="text-xs font-bold text-gray-500 uppercase tracking-wider">Notas de trabajo</p>
-                    <button onClick={() => setNoteOpen(true)} className="flex items-center gap-1 text-sena-green text-xs font-bold bg-green-50 px-2.5 py-1.5 rounded-lg hover:bg-green-100 transition-colors">
-                      <Plus size={12} /> Agregar
-                    </button>
-                  </div>
-                  {caso.timeline.filter(ev => ev.action === 'Nota agregada').length === 0 ? (
-                    <p className="text-xs text-gray-400 text-center py-3">Sin notas. Documenta tu avance.</p>
-                  ) : (
-                    <div className="space-y-2">
-                      {caso.timeline.filter(ev => ev.action === 'Nota agregada').map((n) => (
-                        <div key={n.id} className="bg-gray-50 rounded-xl p-3">
-                          <p className="text-[11px] text-gray-400 mb-1">{formatDate(n.date)} · {n.actor}</p>
-                          <p className="text-sm text-gray-800">{n.note}</p>
-                        </div>
-                      ))}
-                    </div>
-                  )}
-                </div>
-
                 {/* Evidence PhotoPicker (1 to 5 photos mandatory) */}
                 <div className="bg-white rounded-2xl p-4 border border-gray-100 shadow-sm">
                   <PhotoPicker
@@ -377,28 +339,6 @@ export default function CaseDetail({ caseData, techName, onBack, onTakeCase, onS
           </div>
         )}
       </div>
-
-      {/* Note sheet */}
-      {noteOpen && (
-        <div className="fixed inset-0 bg-black/50 z-50 flex items-end" onClick={() => setNoteOpen(false)}>
-          <div className="bg-white w-full rounded-t-3xl p-5 max-w-lg mx-auto" onClick={e => e.stopPropagation()}>
-            <div className="w-12 h-1 bg-gray-200 rounded-full mx-auto mb-4" />
-            <h3 className="font-black text-gray-900 mb-3">Agregar nota de trabajo</h3>
-            <textarea
-              autoFocus
-              value={note}
-              onChange={e => setNote(e.target.value)}
-              placeholder="Describe el avance, hallazgo o acción realizada..."
-              rows={4}
-              className="w-full px-4 py-3 rounded-xl border-2 border-gray-100 bg-gray-50 text-sm focus:outline-none focus:ring-2 focus:ring-sena-green/20 focus:border-sena-green resize-none"
-            />
-            <div className="flex gap-2 mt-3">
-              <button onClick={() => setNoteOpen(false)} disabled={busy} className="flex-1 py-3 rounded-xl border-2 border-gray-100 text-gray-600 font-semibold text-sm disabled:opacity-50">Cancelar</button>
-              <button onClick={addNote} disabled={busy} className="flex-1 py-3 rounded-xl bg-sena-green text-white font-black text-sm hover:bg-sena-dark disabled:opacity-70">{busy ? 'Guardando...' : 'Guardar nota'}</button>
-            </div>
-          </div>
-        </div>
-      )}
 
       {/* Modal Lightbox Fullscreen */}
       {viewingPhoto && (

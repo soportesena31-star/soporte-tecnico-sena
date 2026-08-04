@@ -49,7 +49,6 @@ export default function CasoDetallePage() {
       onBack={() => navigate('/casos')}
       onTakeCase={async () => { await api.casos.tomar(caso.id); return recargar() }}
       onStartWork={async () => { await api.casos.iniciar(caso.id); return recargar() }}
-      onAddNote={async (texto) => { await api.casos.agregarNota(caso.id, texto); return recargar() }}
       onResolve={async (fotoFiles, notasResolucion) => {
         const formData = new FormData()
         if (Array.isArray(fotoFiles)) {

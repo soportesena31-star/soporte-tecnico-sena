@@ -57,6 +57,23 @@ export default function AdminDashboard({ onLogout, adminName, cases, spaces, tec
   const [section, setSection] = useState<Section>('dashboard')
   const [sidebarOpen, setSidebarOpen] = useState(false)
   const [tecnicoFiltro, setTecnicoFiltro] = useState<string | null>(null)
+  const [notifOpen, setNotifOpen] = useState(false)
+  const [notifRead, setNotifRead] = useState(false)
+  const notifRef = useRef<HTMLDivElement | null>(null)
+
+  const notifs = useMemo(() => historyLog.slice(0, 8), [historyLog])
+
+  useEffect(() => {
+    if (!notifOpen) return
+    const onDocClick = (event: MouseEvent) => {
+      if (notifRef.current && !notifRef.current.contains(event.target as Node)) {
+        setNotifOpen(false)
+      }
+    }
+    document.addEventListener('mousedown', onDocClick)
+    return () => document.removeEventListener('mousedown', onDocClick)
+  }, [notifOpen])
+
   const adminInitials = adminName.split(' ').map(n => n[0]).join('').slice(0, 2).toUpperCase()
 
   const resolvedCases = cases.filter(c => ['Resuelto', 'Cerrado'].includes(c.status) && c.createdAt && c.updatedAt)
@@ -150,10 +167,33 @@ export default function AdminDashboard({ onLogout, adminName, cases, spaces, tec
             </div>
           </div>
           <div className="flex items-center gap-2">
-            <button className="relative p-2 rounded-xl hover:bg-gray-100 transition-colors">
-              <Bell size={18} className="text-gray-500" />
-              <span className="absolute top-1.5 right-1.5 w-2 h-2 bg-red-500 rounded-full" />
-            </button>
+            <div className="relative" ref={notifRef}>
+              <button onClick={() => { setNotifRead(true); setNotifOpen(v => !v) }} className="relative p-2 rounded-xl hover:bg-gray-100 transition-colors">
+                <Bell size={18} className="text-gray-500" />
+                {!notifRead && notifs.length > 0 && (
+                  <span className="absolute top-1.5 right-1.5 w-2 h-2 bg-red-500 rounded-full" />
+                )}
+              </button>
+              {notifOpen && (
+                <div className="absolute right-0 top-12 w-80 bg-white border border-gray-100 rounded-2xl shadow-xl z-50 overflow-hidden">
+                  <div className="flex items-center justify-between px-4 py-3 border-b border-gray-100">
+                    <p className="text-sm font-bold text-gray-900">Notificaciones</p>
+                    {notifs.length > 0 && <span className="bg-red-500 text-white text-[10px] font-black rounded-full min-w-[18px] h-[18px] flex items-center justify-center px-1">{notifs.length}</span>}
+                  </div>
+                  <ul className="max-h-80 overflow-auto">
+                    {notifs.length === 0 ? (
+                      <li className="px-4 py-6 text-center text-xs text-gray-400">No hay notificaciones recientes</li>
+                    ) : notifs.map(item => (
+                      <li key={item.id} className="px-4 py-2.5 border-b border-gray-50 hover:bg-gray-50">
+                        <p className="text-xs font-semibold text-gray-800 capitalize">{item.action}</p>
+                        <p className="text-[11px] text-gray-500 truncate">{item.target || item.actor}</p>
+                        <p className="text-[10px] text-gray-400">{item.time}</p>
+                      </li>
+                    ))}
+                  </ul>
+                </div>
+              )}
+            </div>
             <div className="w-8 h-8 bg-sena-green rounded-lg flex items-center justify-center text-white text-xs font-black cursor-pointer hover:bg-sena-dark transition-colors">{adminInitials}</div>
           </div>
         </header>
@@ -417,7 +457,7 @@ function CasesSection({ cases, technicians, onAssignCase, tecnicoFilter, onTecni
     setVerCaso(c)
     // El listado no incluye el historial; se consulta el detalle completo on-demand.
     api.casos.consultar(c.number).then(mapCaso).then((completo) => {
-      setVerCaso((actual) => (actual?.id === c.id ? (completo || c) : actual))
+      setVerCaso((actual) => (actual?.id === c.id ? ((completo || c) as Case) : actual))
     }).catch(() => { /* se conserva la vista resumida */ })
   }
 
@@ -577,8 +617,8 @@ function VerDetalleCasoModal({ caso, onClose }: { caso: Case; onClose: () => voi
               <p className="text-xs text-gray-400 font-semibold uppercase mb-2">Fotos de la novedad</p>
               <div className="grid grid-cols-3 sm:grid-cols-4 gap-2">
                 {fotos.map((f, i) => (
-                  <a key={i} href={urlFoto(f)} target="_blank" rel="noreferrer" className="block aspect-square rounded-xl overflow-hidden border border-gray-200 bg-gray-100">
-                    <img src={urlFoto(f)} alt={`Foto novedad ${i + 1}`} className="w-full h-full object-cover" />
+                  <a key={i} href={urlFoto(f) ?? undefined} target="_blank" rel="noreferrer" className="block aspect-square rounded-xl overflow-hidden border border-gray-200 bg-gray-100">
+                    <img src={urlFoto(f) ?? undefined} alt={`Foto novedad ${i + 1}`} className="w-full h-full object-cover" />
                   </a>
                 ))}
               </div>
@@ -591,8 +631,8 @@ function VerDetalleCasoModal({ caso, onClose }: { caso: Case; onClose: () => voi
               <p className="text-xs text-gray-400 font-semibold uppercase mb-2">Evidencia de resolución</p>
               <div className="grid grid-cols-3 sm:grid-cols-4 gap-2">
                 {evidencias.map((f, i) => (
-                  <a key={i} href={urlFoto(f)} target="_blank" rel="noreferrer" className="block rounded-xl overflow-hidden border border-green-200 bg-white">
-                    <img src={urlFoto(f)} alt={`Evidencia ${i + 1}`} className="w-full h-full object-cover aspect-square" />
+                  <a key={i} href={urlFoto(f) ?? undefined} target="_blank" rel="noreferrer" className="block rounded-xl overflow-hidden border border-green-200 bg-white">
+                    <img src={urlFoto(f) ?? undefined} alt={`Evidencia ${i + 1}`} className="w-full h-full object-cover aspect-square" />
                   </a>
                 ))}
               </div>
@@ -1231,7 +1271,7 @@ function CategoriesSection({ categories, onCrear, onEditar, onEliminar }: {
       else await onCrear({ nombre: name.trim(), prioridad: priority })
       setShowModal(false)
     } catch (err) {
-      setError(err?.message || 'No se pudo guardar la categoría')
+      setError((err instanceof Error ? err.message : '') || 'No se pudo guardar la categoría')
     } finally {
       setSaving(false)
     }
@@ -1244,7 +1284,7 @@ function CategoriesSection({ categories, onCrear, onEditar, onEliminar }: {
     try {
       await onEliminar(c.id)
     } catch (err) {
-      setError(err?.message || 'No se pudo eliminar la categoría')
+      setError((err instanceof Error ? err.message : '') || 'No se pudo eliminar la categoría')
     } finally {
       setDeleting(null)
     }
@@ -1346,12 +1386,10 @@ function ReportsSection({ technicians, categories }: { technicians: Technician[]
   const [techFilter, setTechFilter] = useState('Todos')
   const [statusFilter, setStatusFilter] = useState('Todos')
   const [catFilter, setCatFilter] = useState('Todos')
-  const [report, setReport] = useState(null)
+  const [report, setReport] = useState<{ casos: any[] } | null>(null)
   const [loadingReport, setLoadingReport] = useState(false)
   const [reportError, setReportError] = useState('')
   const [showAllTech, setShowAllTech] = useState(false)
-
-  const CATEGORY_COLORS = ['#39A900', '#2563EB', '#EF4444', '#8B5CF6', '#F59E0B', '#06B6D4', '#9333EA', '#EA580C']
 
   const reportCases = useMemo(() => {
     if (!report?.casos) return []
@@ -1496,7 +1534,7 @@ function ReportsSection({ technicians, categories }: { technicians: Technician[]
       const reportData = await api.reportes.generar(dateFrom, dateTo)
       setReport(reportData)
     } catch (err) {
-      setReportError(err?.message || 'No se pudo cargar el reporte')
+      setReportError((err instanceof Error ? err.message : '') || 'No se pudo cargar el reporte')
       setReport(null)
     } finally {
       setLoadingReport(false)
@@ -1521,7 +1559,7 @@ function ReportsSection({ technicians, categories }: { technicians: Technician[]
       document.body.removeChild(a)
       URL.revokeObjectURL(url)
     } catch (err) {
-      setReportError(err?.message || 'No se pudo descargar el reporte')
+      setReportError((err instanceof Error ? err.message : '') || 'No se pudo descargar el reporte')
     } finally {
       setDownloading(null)
     }
@@ -1756,7 +1794,7 @@ function HistorySection({ historyLog }: { historyLog: HistorialItem[] }) {
       document.body.removeChild(a)
       URL.revokeObjectURL(url)
     } catch (err) {
-      setExportHistoryError(err?.message || 'No se pudo descargar el historial')
+      setExportHistoryError((err instanceof Error ? err.message : '') || 'No se pudo descargar el historial')
     } finally {
       setExportingHistory(false)
     }

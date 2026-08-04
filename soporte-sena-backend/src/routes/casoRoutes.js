@@ -25,8 +25,13 @@ router.post('/:id/tomar', requireAuth, tomarCaso);
 router.post('/:id/asignar', requireAuth, requireRol('administrador'), asignarCasoValidator, validate, asignarCaso);
 router.post('/:id/iniciar', requireAuth, iniciarCaso);
 router.post('/:id/notas', requireAuth, agregarNota);
-// Resolver caso: permitir 1-5 archivos de evidencia con campo 'foto_evidencia'
-router.post('/:id/resolver', requireAuth, upload.array('foto_evidencia', 5), resolverCasoValidator, validate, resolverCaso);
+// Resolver caso: el frontend envia las fotos como 'fotos_evidencia' y el texto
+// 'notas_resolucion'. Con upload.fields se aceptan ambos y el texto va en req.body
+// (upload.array rechaza cualquier campo adicional -> MulterError "Unexpected field").
+router.post('/:id/resolver', requireAuth, upload.fields([
+  { name: 'foto_evidencia', maxCount: 5 },
+  { name: 'fotos_evidencia', maxCount: 5 },
+]), resolverCasoValidator, validate, resolverCaso);
 router.post('/:id/reabrir', requireAuth, reabrirCaso);
 
 module.exports = router;
