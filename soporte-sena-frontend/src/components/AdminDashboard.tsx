@@ -763,7 +763,7 @@ function CasesTable({ cases, compact, onSort, sortField, sortAsc, technicians, o
                   </td>
                   {!compact && (
                     <td className="px-4 py-3.5">
-                      <button onClick={() => onVer?.(c)} className="text-xs text-sena-green font-bold hover:underline opacity-0 group-hover:opacity-100 transition-opacity">Ver →</button>
+                      <button onClick={() => onVer?.(c)} className="text-xs text-sena-green font-bold hover:underline">Ver →</button>
                     </td>
                   )}
                 </tr>
