@@ -1,7 +1,7 @@
 const jwt = require('jsonwebtoken');
 const { Usuario, Role, TokenAcceso } = require('../models');
 const { successResponse, errorResponse } = require('../utils/response');
-const { ERR_CREDENCIALES_INVALIDAS, ERR_TOKEN_INVALIDO, ERR_NOT_FOUND, ERR_INTERNO } = require('../utils/errorCodes');
+const { ERR_CREDENCIALES_INVALIDAS, ERR_TOKEN_INVALIDO, ERR_CORREO_NO_REGISTRADO, ERR_CORREO_NO_ENVIADO } = require('../utils/errorCodes');
 const { generarToken, hashearToken } = require('../utils/tokens');
 const { enviarRestablecimiento } = require('../utils/mailer');
 
