@@ -1,5 +1,7 @@
 const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:4000/api';
 
+export { API_URL };
+
 const TOKEN_KEY = 'sena_soporte_token';
 
 // sessionStorage aisla la sesion por pestana: asi se puede estar logueado con
@@ -110,6 +112,10 @@ export const api = {
   },
   roles: {
     listar: () => request('/roles'),
+  },
+  push: {
+    suscribir: (datos) => request('/push/suscribir', { method: 'POST', body: datos }),
+    desuscribir: (endpoint) => request('/push/desuscribir', { method: 'POST', body: { endpoint } }),
   },
   qr: {
     obtener: () => request('/qr'),

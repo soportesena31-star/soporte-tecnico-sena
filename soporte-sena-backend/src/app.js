@@ -10,6 +10,7 @@ const routes = require('./routes');
 const { errorHandler } = require('./middleware/errorHandler');
 const logger = require('./config/logger');
 const { ERR_NOT_FOUND } = require('./utils/errorCodes');
+const { suscribir: suscribirSSE } = require('./services/eventBus');
 
 const app = express();
 
@@ -51,6 +52,19 @@ app.use(morgan('dev', { stream: { write: (msg) => logger.info(msg.trim()) } }));
 app.use('/uploads', express.static(path.join(__dirname, '..', 'uploads')));
 
 app.get('/api/health', (req, res) => res.json({ status: 'ok' }));
+
+// Stream SSE en tiempo real (alertas de casos nuevos). Los paneles abiertos
+// se conectan aqui; si el navegador lo cierra, se limpia solo.
+app.get('/api/eventos', (req, res) => {
+  res.setHeader('Content-Type', 'text/event-stream');
+  res.setHeader('Cache-Control', 'no-cache');
+  res.setHeader('Connection', 'keep-alive');
+  res.flushHeaders();
+  res.write(`event: conectado\ndata: ${JSON.stringify({ ok: true })}\n\n`);
+  const cerrar = suscribirSSE(res);
+  req.on('close', cerrar);
+});
+
 app.use('/api', routes);
 
 app.use((req, res) => {

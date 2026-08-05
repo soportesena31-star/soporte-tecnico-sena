@@ -11,6 +11,11 @@ export default defineConfig({
     tailwindcss(),
     VitePWA({
       registerType: 'autoUpdate',
+      // SW custom en src/sw.ts: además del precache de workbox, maneja los
+      // eventos 'push' para mostrar la notificacion de caso nuevo y sonar.
+      strategies: 'injectManifest',
+      srcDir: 'src',
+      filename: 'sw.ts',
       includeAssets: ['icons/icon-192.png', 'icons/icon-512.png'],
       manifest: {
         name: 'SENA Soporte Técnico',
@@ -28,10 +33,8 @@ export default defineConfig({
           { src: '/icons/icon-maskable-512.png', sizes: '512x512', type: 'image/png', purpose: 'maskable' },
         ],
       },
-      workbox: {
-        // Las llamadas a la API nunca se sirven desde cache: un caso
-        // desactualizado es peor que uno que tarda un segundo en cargar.
-        navigateFallbackDenylist: [/^\/api\//],
+      injectManifest: {
+        globPatterns: ['**/*.{js,css,html,ico,png,svg,woff2}'],
       },
     }),
   ],

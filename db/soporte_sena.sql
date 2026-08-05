@@ -194,6 +194,39 @@ INSERT INTO `tokens_acceso` (`id`, `tipo`, `email`, `token_hash`, `usuario_id`, 
 -- --------------------------------------------------------
 
 --
+-- Estructura de tabla para la tabla `push_suscripciones`
+--
+
+CREATE TABLE `push_suscripciones` (
+  `id` int(10) UNSIGNED NOT NULL,
+  `usuario_id` int(10) UNSIGNED NOT NULL COMMENT 'Dispositivo suscrito: quien recibe la alerta',
+  `endpoint` varchar(500) NOT NULL,
+  `p256dh` varchar(255) NOT NULL,
+  `auth` varchar(255) NOT NULL,
+  `user_agent` varchar(255) DEFAULT NULL,
+  `created_at` timestamp NOT NULL DEFAULT current_timestamp()
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci COMMENT='Suscripciones Web Push para alertas de casos nuevos';
+
+--
+-- Índices para la tabla `push_suscripciones`
+--
+ALTER TABLE `push_suscripciones`
+  ADD PRIMARY KEY (`id`),
+  ADD UNIQUE KEY `uq_push_endpoint` (`endpoint`),
+  ADD KEY `idx_push_usuario` (`usuario_id`);
+
+--
+-- FKs para la tabla `push_suscripciones`
+--
+ALTER TABLE `push_suscripciones`
+  ADD CONSTRAINT `fk_push_usuario` FOREIGN KEY (`usuario_id`) REFERENCES `usuarios` (`id`) ON DELETE CASCADE ON UPDATE CASCADE;
+
+ALTER TABLE `push_suscripciones`
+  MODIFY `id` int(10) UNSIGNED NOT NULL AUTO_INCREMENT;
+
+-- --------------------------------------------------------
+
+--
 -- Estructura de tabla para la tabla `usuarios`
 --
 

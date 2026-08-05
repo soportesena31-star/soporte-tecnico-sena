@@ -4,6 +4,8 @@ const {
 } = require('../models');
 const { successResponse, errorResponse } = require('../utils/response');
 const logger = require('../config/logger');
+const { notificarRoles } = require('../services/pushService');
+const { publicar: publicarEvento } = require('../services/eventBus');
 const {
   ERR_NOT_FOUND, ERR_VALIDATION, ERR_ESPACIO_INACTIVO, ERR_ESTADO_INVALIDO,
   ERR_CASO_YA_ASIGNADO, ERR_EVIDENCIA_REQUERIDA, ERR_FORBIDDEN,
@@ -117,6 +119,27 @@ async function crearCaso(req, res, next) {
     });
 
     logger.info('Caso creado', { numero_caso: casoCompleto.numero_caso });
+
+    // Alerta en vivo: notificacion push a tecnicos/admin y evento SSE para
+    // los paneles abiertos. Fire-and-forget: no debe bloquear la respuesta.
+    const nombreEspacio = casoCompleto.espacio?.nombre
+      || casoCompleto.ubicacion_personalizada
+      || 'ubicacion no registrada';
+    const resumen = `${casoCompleto.numero_caso} - ${nombreEspacio} (${casoCompleto.categoria?.nombre || 'Sin categoria'})`;
+
+    notificarRoles(['tecnico', 'administrador'], {
+      title: 'Nuevo caso de soporte',
+      body: resumen,
+      data: { numero_caso: casoCompleto.numero_caso, caso_id: casoCompleto.id },
+      badge: '/icons/icon-192.png',
+      icon: '/icons/icon-192.png',
+    });
+    publicarEvento('nuevo_caso', {
+      numero_caso: casoCompleto.numero_caso,
+      caso_id: casoCompleto.id,
+      resumen,
+    });
+
     return successResponse(res, 201, casoCompleto, 'Caso registrado');
   } catch (err) {
     await t.rollback();

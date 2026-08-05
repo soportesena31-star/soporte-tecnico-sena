@@ -1,6 +1,7 @@
 import { Suspense, lazy } from 'react'
 import { BrowserRouter, Routes, Route } from 'react-router-dom'
 import { AuthProvider } from './context/AuthContext'
+import { useAlertas } from './hooks/useAlertas'
 import ProtectedRoute from './components/ProtectedRoute'
 import Landing from './pages/Landing'
 import ReportarPage from './pages/ReportarPage'
@@ -27,27 +28,36 @@ function CargandoPantallaCompleta() {
 }
 
 export default function App() {
+  // Activa las alertas de casos nuevos (push + sonido en vivo) para el
+  // personal logueado. Debe estar dentro de AuthProvider para leer la sesion.
+  function AppConAlertas() {
+    useAlertas()
+    return (
+      <Routes>
+        <Route path="/" element={<Landing />} />
+        <Route path="/reportar" element={<ReportarPage />} />
+        <Route path="/confirmacion" element={<ConfirmacionPage />} />
+        <Route path="/consultar" element={<ConsultarPage />} />
+        <Route path="/consultar/:numeroCaso" element={<ConsultarPage />} />
+        <Route path="/login" element={<LoginPage />} />
+        <Route path="/invitacion/:token" element={<AceptarInvitacionPage />} />
+        <Route path="/olvide-password" element={<OlvidePasswordPage />} />
+        <Route path="/restablecer/:token" element={<RestablecerPasswordPage />} />
+
+        <Route path="/casos" element={<ProtectedRoute rolRequerido="Técnico"><TecnicoPage /></ProtectedRoute>} />
+        <Route path="/casos/:numeroCaso" element={<ProtectedRoute rolRequerido="Técnico"><CasoDetallePage /></ProtectedRoute>} />
+
+        <Route path="/admin" element={<ProtectedRoute rolRequerido="Administrador"><Suspense fallback={<CargandoPantallaCompleta />}><AdminPage /></Suspense></ProtectedRoute>} />
+
+        <Route path="*" element={<Landing />} />
+      </Routes>
+    )
+  }
+
   return (
     <BrowserRouter>
       <AuthProvider>
-        <Routes>
-          <Route path="/" element={<Landing />} />
-          <Route path="/reportar" element={<ReportarPage />} />
-          <Route path="/confirmacion" element={<ConfirmacionPage />} />
-          <Route path="/consultar" element={<ConsultarPage />} />
-          <Route path="/consultar/:numeroCaso" element={<ConsultarPage />} />
-          <Route path="/login" element={<LoginPage />} />
-          <Route path="/invitacion/:token" element={<AceptarInvitacionPage />} />
-          <Route path="/olvide-password" element={<OlvidePasswordPage />} />
-          <Route path="/restablecer/:token" element={<RestablecerPasswordPage />} />
-
-          <Route path="/casos" element={<ProtectedRoute rolRequerido="Técnico"><TecnicoPage /></ProtectedRoute>} />
-          <Route path="/casos/:numeroCaso" element={<ProtectedRoute rolRequerido="Técnico"><CasoDetallePage /></ProtectedRoute>} />
-
-          <Route path="/admin" element={<ProtectedRoute rolRequerido="Administrador"><Suspense fallback={<CargandoPantallaCompleta />}><AdminPage /></Suspense></ProtectedRoute>} />
-
-          <Route path="*" element={<Landing />} />
-        </Routes>
+        <AppConAlertas />
       </AuthProvider>
     </BrowserRouter>
   )

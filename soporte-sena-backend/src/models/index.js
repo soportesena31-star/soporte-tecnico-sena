@@ -7,6 +7,7 @@ const Caso = require('./Caso');
 const HistorialCaso = require('./HistorialCaso');
 const TokenAcceso = require('./TokenAcceso');
 const Configuracion = require('./Configuracion');
+const PushSuscripcion = require('./PushSuscripcion');
 
 // El alias 'rol' es a proposito: usuario.rol devuelve la instancia de Role
 // completa cuando esta incluida, y Usuario.toJSON() la aplana a un string
@@ -54,6 +55,11 @@ TokenAcceso.belongsTo(Role, {
   foreignKey: 'rol_id', as: 'rolPropuesto', onDelete: 'RESTRICT', onUpdate: 'CASCADE',
 });
 
+Usuario.hasMany(PushSuscripcion, { foreignKey: 'usuario_id', as: 'pushSuscripciones' });
+PushSuscripcion.belongsTo(Usuario, {
+  foreignKey: 'usuario_id', as: 'usuario', onDelete: 'CASCADE', onUpdate: 'CASCADE',
+});
+
 module.exports = {
   sequelize,
   Espacio,
@@ -64,4 +70,5 @@ module.exports = {
   HistorialCaso,
   TokenAcceso,
   Configuracion,
+  PushSuscripcion,
 };
