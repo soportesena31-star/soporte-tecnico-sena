@@ -3,8 +3,6 @@ const cors = require('cors');
 const helmet = require('helmet');
 const morgan = require('morgan');
 const path = require('path');
-const net = require('node:net');
-const dns = require('node:dns');
 
 require('dotenv').config();
 
@@ -13,7 +11,6 @@ const { errorHandler } = require('./middleware/errorHandler');
 const logger = require('./config/logger');
 const { ERR_NOT_FOUND } = require('./utils/errorCodes');
 const { suscribir: suscribirSSE } = require('./services/eventBus');
-const { requireAuth, requireRol } = require('./middleware/auth');
 
 const app = express();
 
@@ -55,37 +52,6 @@ app.use(morgan('dev', { stream: { write: (msg) => logger.info(msg.trim()) } }));
 app.use('/uploads', express.static(path.join(__dirname, '..', 'uploads')));
 
 app.get('/api/health', (req, res) => res.json({ status: 'ok' }));
-
-// TEMPORAL (diagnostico SMTP): prueba DNS y TCP hacia el host SMTP desde
-// dentro del contenedor. Se elimina cuando se resuelva el envio de correos.
-function probarTcp(host, port, timeoutMs = 10000) {
-  return new Promise((resolve) => {
-    const socket = new net.Socket();
-    const fin = (resultado) => { socket.destroy(); resolve(resultado); };
-    socket.setTimeout(timeoutMs);
-    socket.once('connect', () => fin({ ok: true }));
-    socket.once('timeout', () => fin({ ok: false, error: 'timeout' }));
-    socket.once('error', (e) => fin({ ok: false, error: `${e.code || ''} ${e.message}` }));
-    socket.connect(port, host);
-  });
-}
-
-app.get('/api/_diagnostico/smtp', requireAuth, requireRol('administrador'), async (req, res) => {
-  const objetivos = [
-    ['smtp.gmail.com', 465],
-    ['smtp.gmail.com', 587],
-    ['fcm.googleapis.com', 443],
-    ['google.com', 443],
-    ['api.brevo.com', 443],
-    ['smtp.office365.com', 587],
-    ['smtp.zoho.com', 465],
-  ];
-  const resultados = [];
-  for (const [host, puerto] of objetivos) {
-    resultados.push({ host, puerto, ...await probarTcp(host, puerto, 8000) });
-  }
-  res.json({ resultados });
-});
 
 // Stream SSE en tiempo real (alertas de casos nuevos). Los paneles abiertos
 // se conectan aqui; si el navegador lo cierra, se limpia solo.
