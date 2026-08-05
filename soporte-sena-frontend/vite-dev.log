@@ -1,0 +1,14 @@
+
+> soporte-sena-frontend@1.0.0 dev
+> vite --host 0.0.0.0
+
+
+  [32m[1mVITE[22m v8.1.5[39m  [2mready in [0m[1m898[22m[2m[0m ms[22m
+
+  [32m➜[39m  [1mLocal[22m:   [36mhttp://localhost:[1m5173[22m/[39m
+  [32m➜[39m  [1mNetwork[22m: [36mhttp://10.1.196.227:[1m5173[22m/[39m
+  [32m➜[39m  [1mNetwork[22m: [36mhttp://192.168.137.1:[1m5173[22m/[39m
+[2m4:58:32 p. m.[22m [36m[1m[vite][22m[39m [90m[2m(client)[22m[39m [32mhmr update [39m[2m/src/index.css, /src/components/AdminDashboard.tsx[22m
+[2m4:59:35 p. m.[22m [36m[1m[vite][22m[39m [90m[2m(client)[22m[39m [32mhmr update [39m[2m/src/index.css, /src/components/AdminDashboard.tsx[22m
+[2m5:01:25 p. m.[22m [36m[1m[vite][22m[39m [90m[2m(client)[22m[39m [32mhmr update [39m[2m/src/index.css, /src/components/AdminDashboard.tsx[22m
+[2m5:20:55 p. m.[22m [36m[1m[vite][22m[39m [90m[2m(client)[22m[39m [32mhmr update [39m[2m/src/index.css, /src/components/AdminDashboard.tsx[22m

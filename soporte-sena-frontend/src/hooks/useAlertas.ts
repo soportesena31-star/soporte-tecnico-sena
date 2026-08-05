@@ -1,4 +1,4 @@
-import { useEffect, useRef } from 'react'
+import { useCallback, useEffect, useRef, useState } from 'react'
 import { useAuth } from '../context/AuthContext'
 import { api, getToken, API_URL } from '../api/client'
 
@@ -49,14 +49,62 @@ function vibrar() {
 
 /**
  * Alerta global de casos nuevos:
- * 1. Solicita permiso de notificaciones y suscribe el dispositivo a Web Push
- *    (suena aun con la app cerrada, via service worker).
- * 2. Escucha el stream SSE /api/eventos mientras la app esta abierta y, si
+ * 1. Escucha el stream SSE /api/eventos mientras la app esta abierta y, si
  *    llega un caso nuevo, reproduce el tono de alerta + vibra + notificacion.
+ * 2. Suscripcion Web Push (suena aun con la app cerrada, via service worker).
+ *    iOS solo muestra el prompt de permiso dentro de un gesto del usuario,
+ *    asi que se expone `permisoPendiente` + `activarAlertas()` para que la
+ *    UI muestre un boton que dispare la solicitud al ser tocado.
  */
 export function useAlertas() {
   const { usuario } = useAuth()
   const sseRef = useRef<EventSource | null>(null)
+  const [permisoPendiente, setPermisoPendiente] = useState(false)
+  const [activando, setActivando] = useState(false)
+
+  const suscribirPush = async () => {
+    if (!('serviceWorker' in navigator) || !('PushManager' in window)) return
+    if (!VAPID_PUBLIC) return
+    try {
+      const reg = await navigator.serviceWorker.ready
+      let sub = await reg.pushManager.getSubscription()
+      if (!sub) {
+        sub = await reg.pushManager.subscribe({
+          userVisibleOnly: true,
+          applicationServerKey: urlBase64ToUint8Array(VAPID_PUBLIC).buffer as ArrayBuffer,
+        })
+      }
+      await api.push.suscribir({
+        endpoint: sub.endpoint,
+        keys: { p256dh: btoa(String.fromCharCode(...new Uint8Array(sub.getKey('p256dh')!))), auth: btoa(String.fromCharCode(...new Uint8Array(sub.getKey('auth')!))) },
+      })
+    } catch {
+      // Sin permiso o navegador sin push: la alerta SSE sigue funcionando.
+    }
+  }
+
+  const pedirPermiso = async () => {
+    if (!('Notification' in window)) return
+    if (Notification.permission === 'default') {
+      await Notification.requestPermission()
+    }
+  }
+
+  /**
+   * Debe llamarse dentro del gesto del usuario (onClick) para que Safari/iOS
+   * muestre el prompt de permiso. Suscribe el dispositivo a Web Push.
+   */
+  const activarAlertas = useCallback(async () => {
+    setActivando(true)
+    await pedirPermiso()
+    await suscribirPush()
+    setActivando(false)
+    if ('Notification' in window && Notification.permission === 'default' && haySoportePush()) {
+      setPermisoPendiente(true)
+    } else {
+      setPermisoPendiente(false)
+    }
+  }, [])
 
   useEffect(() => {
     if (!usuario) return
@@ -68,34 +116,6 @@ export function useAlertas() {
     if (!esPersonal) return
 
     let cancelado = false
-
-    const suscribirPush = async () => {
-      if (!('serviceWorker' in navigator) || !('PushManager' in window)) return
-      if (!VAPID_PUBLIC) return
-      try {
-        const reg = await navigator.serviceWorker.ready
-        let sub = await reg.pushManager.getSubscription()
-        if (!sub) {
-          sub = await reg.pushManager.subscribe({
-            userVisibleOnly: true,
-            applicationServerKey: urlBase64ToUint8Array(VAPID_PUBLIC).buffer as ArrayBuffer,
-          })
-        }
-        await api.push.suscribir({
-          endpoint: sub.endpoint,
-          keys: { p256dh: btoa(String.fromCharCode(...new Uint8Array(sub.getKey('p256dh')!))), auth: btoa(String.fromCharCode(...new Uint8Array(sub.getKey('auth')!))) },
-        })
-      } catch {
-        // Sin permiso o navegador sin push: la alerta SSE sigue funcionando.
-      }
-    }
-
-    const pedirPermiso = async () => {
-      if (!('Notification' in window)) return
-      if (Notification.permission === 'default') {
-        await Notification.requestPermission()
-      }
-    }
 
     const conectarSSE = () => {
       if (sseRef.current) return
@@ -120,7 +140,9 @@ export function useAlertas() {
       }
     }
 
-    pedirPermiso().then(suscribirPush)
+    if ('Notification' in window && Notification.permission === 'default' && haySoportePush()) {
+      setPermisoPendiente(true)
+    }
     conectarSSE()
 
     return () => {
@@ -131,6 +153,8 @@ export function useAlertas() {
       }
     }
   }, [usuario])
+
+  return { permisoPendiente, activando, activarAlertas }
 }
 
 export function haySoportePush() {
