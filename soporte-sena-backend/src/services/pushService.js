@@ -65,4 +65,37 @@ async function notificarRoles(rolesPermitidos, payload) {
   }
 }
 
-module.exports = { notificarRoles, PUSH_ACTIVO };
+/**
+ * Envia una notificacion push SOLO a los dispositivos de un usuario
+ * especifico (ej. el tecnico al que se le reasigno un caso).
+ * Nunca lanza: las fallas se registran y las suscripciones vencidas se limpian.
+ */
+async function notificarUsuario(usuarioId, payload) {
+  if (!PUSH_ACTIVO) return;
+  try {
+    const suscripciones = await PushSuscripcion.findAll({ where: { usuario_id: usuarioId } });
+    if (suscripciones.length === 0) return;
+
+    const cuerpo = JSON.stringify(payload);
+
+    for (const s of suscripciones) {
+      try {
+        await webpush.sendNotification({
+          endpoint: s.endpoint,
+          keys: { p256dh: s.p256dh, auth: s.auth },
+        }, cuerpo, { TTL: 60 });
+      } catch (err) {
+        if (err.statusCode === 404 || err.statusCode === 410) {
+          await s.destroy().catch(() => {});
+          logger.info('Suscripcion push vencida, eliminada', { id: s.id });
+        } else {
+          logger.error('Error enviando push a usuario', { usuario_id: usuarioId, statusCode: err.statusCode, message: err.message });
+        }
+      }
+    }
+  } catch (err) {
+    logger.error('Error en notificarUsuario', { message: err.message });
+  }
+}
+
+module.exports = { notificarRoles, notificarUsuario, PUSH_ACTIVO };

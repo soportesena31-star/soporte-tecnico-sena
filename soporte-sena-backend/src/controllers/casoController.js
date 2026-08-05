@@ -4,7 +4,7 @@ const {
 } = require('../models');
 const { successResponse, errorResponse } = require('../utils/response');
 const logger = require('../config/logger');
-const { notificarRoles } = require('../services/pushService');
+const { notificarRoles, notificarUsuario } = require('../services/pushService');
 const { publicar: publicarEvento } = require('../services/eventBus');
 const {
   ERR_NOT_FOUND, ERR_VALIDATION, ERR_ESPACIO_INACTIVO, ERR_ESTADO_INVALIDO,
@@ -285,6 +285,100 @@ async function asignarCaso(req, res, next) {
   }
 }
 
+async function reasignarCaso(req, res, next) {
+  try {
+    // Puede reasignar el tecnico actualmente asignado al caso, o un
+    // administrador (siempre). Un tecnico que no es el asignado no puede.
+    const caso = await Caso.findByPk(req.params.id);
+    if (!caso) {
+      return errorResponse(res, 404, ERR_NOT_FOUND, 'Caso no encontrado');
+    }
+    if (['resuelto', 'cerrado'].includes(caso.estado)) {
+      return errorResponse(res, 409, ERR_ESTADO_INVALIDO, 'No se puede reasignar un caso resuelto o cerrado');
+    }
+    const esAdministrador = req.usuario?.rol?.nombre === 'administrador';
+    const esTecnicoAsignado = caso.tecnico_id === req.usuario.id;
+    if (!esAdministrador && !esTecnicoAsignado) {
+      return errorResponse(res, 403, ERR_FORBIDDEN, 'Solo el tecnico asignado o un administrador pueden reasignar este caso');
+    }
+
+    const { tecnico_id, motivo } = req.body;
+    if (caso.tecnico_id && Number(caso.tecnico_id) === Number(tecnico_id)) {
+      return errorResponse(res, 400, ERR_VALIDATION, 'El caso ya esta asignado a ese tecnico');
+    }
+
+    const tecnicoNuevo = await Usuario.findByPk(tecnico_id, {
+      include: [{ model: Role, as: 'rol' }],
+    });
+    if (!tecnicoNuevo || !tecnicoNuevo.activo || tecnicoNuevo.rol?.nombre !== 'tecnico') {
+      return errorResponse(res, 400, ERR_VALIDATION, 'Debes seleccionar un tecnico valido');
+    }
+
+    // Se conserva el estado: si iba en_proceso, sigue en_proceso con el nuevo tecnico.
+    await caso.update({
+      tecnico_id: tecnicoNuevo.id,
+      fecha_asignacion: new Date(),
+    });
+
+    const tecnicoAnterior = caso.previous('tecnico_id')
+      ? await Usuario.findByPk(caso.previous('tecnico_id'), { attributes: ['nombre'] })
+      : null;
+
+    const partes = [
+      `Reasignado de ${tecnicoAnterior?.nombre || 'sin tecnico'} a ${tecnicoNuevo.nombre}`,
+    ];
+    if (motivo && motivo.trim()) partes.push(`Motivo: ${motivo.trim()}`);
+
+    await HistorialCaso.create({
+      caso_id: caso.id,
+      accion: 'reasignado',
+      usuario_id: req.usuario.id,
+      detalle: partes.join(' | '),
+    });
+
+    const casoActualizado = await Caso.findByPk(caso.id, {
+      include: [
+        { model: Espacio, as: 'espacio' },
+        { model: Categoria, as: 'categoria' },
+        { model: Usuario, as: 'tecnico', attributes: ['id', 'nombre'] },
+        {
+          model: HistorialCaso,
+          as: 'historial',
+          attributes: ['id', 'accion', 'detalle', 'createdAt'],
+          include: [{ model: Usuario, as: 'usuario', attributes: ['nombre'] }],
+          order: [['createdAt', 'ASC']],
+        },
+      ],
+    });
+
+    logger.info('Caso reasignado', { numero_caso: casoActualizado.numero_caso, a: tecnicoNuevo.id });
+
+    // Avisa al nuevo tecnico (solo a el) y refresca los paneles abiertos.
+    const nombreEspacio = casoActualizado.espacio?.nombre
+      || casoActualizado.ubicacion_personalizada
+      || 'ubicacion no registrada';
+    const resumen = `${casoActualizado.numero_caso} - ${nombreEspacio} (${casoActualizado.categoria?.nombre || 'Sin categoria'})`;
+
+    notificarUsuario(tecnicoNuevo.id, {
+      title: 'Caso reasignado a ti',
+      body: resumen,
+      data: { numero_caso: casoActualizado.numero_caso, caso_id: casoActualizado.id },
+      badge: '/icons/icon-192.png',
+      icon: '/icons/icon-192.png',
+    });
+    publicarEvento('caso_actualizado', {
+      numero_caso: casoActualizado.numero_caso,
+      caso_id: casoActualizado.id,
+      resumen,
+      accion: 'reasignado',
+    });
+
+    return successResponse(res, 200, casoActualizado, 'Caso reasignado');
+  } catch (err) {
+    next(err);
+  }
+}
+
 async function iniciarCaso(req, res, next) {
   try {
     const caso = await Caso.findByPk(req.params.id);
@@ -422,6 +516,7 @@ module.exports = {
   listarCasos,
   tomarCaso,
   asignarCaso,
+  reasignarCaso,
   iniciarCaso,
   agregarNota,
   resolverCaso,

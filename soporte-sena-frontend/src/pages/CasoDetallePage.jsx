@@ -10,6 +10,7 @@ export default function CasoDetallePage() {
   const { numeroCaso } = useParams()
   const { usuario } = useAuth()
   const [caso, setCaso] = useState(null)
+  const [tecnicos, setTecnicos] = useState([])
   const [cargando, setCargando] = useState(true)
   const [errorCarga, setErrorCarga] = useState('')
 
@@ -19,6 +20,13 @@ export default function CasoDetallePage() {
     setCaso(mapeado)
     return mapeado
   }, [numeroCaso])
+
+  useEffect(() => {
+    // Tecnicos activos para la reasignacion (solo si el caso lo permite).
+    api.usuarios.tecnicos().then((lista) => {
+      setTecnicos(lista.map((t) => ({ id: String(t.id), nombre: t.nombre })))
+    }).catch(() => { /* la reasignacion simplemente no ofrecera tecnicos */ })
+  }, [])
 
   useEffect(() => {
     recargar().catch((err) => setErrorCarga(err.message || 'No se pudo cargar el caso')).finally(() => setCargando(false))
@@ -42,6 +50,14 @@ export default function CasoDetallePage() {
     )
   }
 
+  const rolUsuario = (() => {
+    const r = usuario?.rol
+    return typeof r === 'object' && r !== null && typeof r.nombre === 'string' ? r.nombre : typeof r === 'string' ? r : ''
+  })()
+  const esAdmin = rolUsuario === 'administrador'
+  const esTecnicoAsignado = caso.assignedTo?.id === String(usuario?.id)
+  const puedeReasignar = (esAdmin || esTecnicoAsignado) && !['Resuelto', 'Cerrado'].includes(caso.status)
+
   return (
     <CaseDetail
       caseData={caso}
@@ -56,6 +72,12 @@ export default function CasoDetallePage() {
         }
         if (notasResolucion) formData.append('notas_resolucion', notasResolucion)
         await api.casos.resolver(caso.id, formData)
+        return recargar()
+      }}
+      puedeReasignar={puedeReasignar}
+      tecnicos={tecnicos}
+      onReassign={async (tecnicoId, motivo) => {
+        await api.casos.reasignar(caso.id, tecnicoId, motivo)
         return recargar()
       }}
     />

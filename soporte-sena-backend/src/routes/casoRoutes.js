@@ -2,9 +2,9 @@ const express = require('express');
 
 const router = express.Router();
 const {
-  crearCaso, consultarPorNumero, listarCasos, tomarCaso, asignarCaso, iniciarCaso, agregarNota, resolverCaso, reabrirCaso,
+  crearCaso, consultarPorNumero, listarCasos, tomarCaso, asignarCaso, reasignarCaso, iniciarCaso, agregarNota, resolverCaso, reabrirCaso,
 } = require('../controllers/casoController');
-const { crearCasoValidator, resolverCasoValidator, asignarCasoValidator } = require('../validators/casoValidators');
+const { crearCasoValidator, resolverCasoValidator, asignarCasoValidator, reasignarCasoValidator } = require('../validators/casoValidators');
 const validate = require('../middleware/validate');
 const { requireAuth, requireRol } = require('../middleware/auth');
 const upload = require('../middleware/upload');
@@ -23,6 +23,9 @@ router.get('/consultar/:numero_caso', consultarPorNumero);
 router.get('/', requireAuth, listarCasos);
 router.post('/:id/tomar', requireAuth, tomarCaso);
 router.post('/:id/asignar', requireAuth, requireRol('administrador'), asignarCasoValidator, validate, asignarCaso);
+// Reasignacion: la puede ejecutar el tecnico asignado al caso o un administrador
+// (la autorizacion fina se valida en el controlador).
+router.post('/:id/reasignar', requireAuth, reasignarCasoValidator, validate, reasignarCaso);
 router.post('/:id/iniciar', requireAuth, iniciarCaso);
 router.post('/:id/notas', requireAuth, agregarNota);
 // Resolver caso: el frontend envia las fotos como 'fotos_evidencia' y el texto

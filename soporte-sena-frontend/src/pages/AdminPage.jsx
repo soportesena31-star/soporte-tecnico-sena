@@ -74,6 +74,11 @@ export default function AdminPage() {
     await cargarTodo()
   }
 
+  const handleReassignCase = async (caseId, tecnicoId, motivo) => {
+    await api.casos.reasignar(caseId, tecnicoId, motivo)
+    await cargarTodo()
+  }
+
   const handleEditarTecnico = async (id, datos) => {
     await api.usuarios.actualizar(id, datos)
     await cargarTodo()
@@ -131,6 +136,7 @@ export default function AdminPage() {
       onToggleSpace={handleToggleSpace}
       onInvitar={handleInvitar}
       onAssignCase={handleAssignCase}
+      onReassignCase={handleReassignCase}
       onEditarTecnico={handleEditarTecnico}
       onCrearCategoria={handleCrearCategoria}
       onEditarCategoria={handleEditarCategoria}

@@ -86,4 +86,21 @@ async function actualizarUsuario(req, res, next) {
   }
 }
 
-module.exports = { listarUsuarios, actualizarUsuario };
+// Lista breve de tecnicos activos: la usan los tecnicos para reasignar casos.
+// A diferencia de listarUsuarios (solo administrador), aqui basta con estar
+// autenticado; se omiten datos sensibles (email, conteos).
+async function listarTecnicos(req, res, next) {
+  try {
+    const tecnicos = await Usuario.findAll({
+      attributes: ['id', 'nombre'],
+      where: { activo: true },
+      include: [{ model: Role, as: 'rol', where: { nombre: 'tecnico' }, required: true, attributes: [] }],
+      order: [['nombre', 'ASC']],
+    });
+    return successResponse(res, 200, tecnicos);
+  } catch (err) {
+    next(err);
+  }
+}
+
+module.exports = { listarUsuarios, listarTecnicos, actualizarUsuario };

@@ -14,7 +14,7 @@ HistorialCaso.init({
     allowNull: false,
   },
   accion: {
-    type: DataTypes.ENUM('creado', 'asignado', 'en_proceso', 'nota', 'resuelto', 'cerrado', 'reabierto'),
+    type: DataTypes.ENUM('creado', 'asignado', 'en_proceso', 'nota', 'resuelto', 'cerrado', 'reabierto', 'reasignado'),
     allowNull: false,
   },
   usuario_id: {

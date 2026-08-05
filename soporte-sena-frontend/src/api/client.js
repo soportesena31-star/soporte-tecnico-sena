@@ -89,6 +89,7 @@ export const api = {
     listar: (query) => request('/casos', { query }),
     tomar: (id) => request(`/casos/${id}/tomar`, { method: 'POST' }),
     asignar: (id, tecnico_id) => request(`/casos/${id}/asignar`, { method: 'POST', body: { tecnico_id } }),
+    reasignar: (id, tecnico_id, motivo) => request(`/casos/${id}/reasignar`, { method: 'POST', body: { tecnico_id, motivo } }),
     iniciar: (id) => request(`/casos/${id}/iniciar`, { method: 'POST' }),
     agregarNota: (id, nota) => request(`/casos/${id}/notas`, { method: 'POST', body: { nota } }),
     resolver: (id, formData) => request(`/casos/${id}/resolver`, { method: 'POST', body: formData }),
@@ -130,6 +131,7 @@ export const api = {
   },
   usuarios: {
     listar: (query) => request('/usuarios', { query }),
+    tecnicos: () => request('/usuarios/tecnicos'),
     actualizar: (id, datos) => request(`/usuarios/${id}`, { method: 'PUT', body: datos }),
   },
   historial: {

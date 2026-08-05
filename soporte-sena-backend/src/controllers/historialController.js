@@ -12,11 +12,12 @@ const ACCION_DISPLAY = {
   resuelto: 'Caso resuelto',
   cerrado: 'Caso cerrado',
   reabierto: 'Caso reabierto',
+  reasignado: 'Caso reasignado',
 };
 
 const ACCION_TIPO = {
   creado: 'Creación', asignado: 'Asignación', en_proceso: 'Estado', nota: 'Estado',
-  resuelto: 'Resolución', cerrado: 'Cierre', reabierto: 'Estado',
+  resuelto: 'Resolución', cerrado: 'Cierre', reabierto: 'Estado', reasignado: 'Asignación',
 };
 
 const ROL_DISPLAY = { tecnico: 'Técnico', administrador: 'Administrador' };

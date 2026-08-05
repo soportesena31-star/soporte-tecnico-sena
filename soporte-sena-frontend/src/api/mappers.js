@@ -41,6 +41,7 @@ const ACCION_DISPLAY = {
   resuelto: 'Caso resuelto',
   cerrado: 'Caso cerrado',
   reabierto: 'Caso reabierto',
+  reasignado: 'Caso reasignado',
 };
 
 export function mapEspacio(e) {
@@ -142,6 +143,7 @@ const ACCION_TIPO = {
   resuelto: 'resolve',
   cerrado: 'close',
   reabierto: 'status',
+  reasignado: 'assign',
 };
 
 /** Convierte una entrada de GET /api/historial (feed global) a la forma que usa HistorySection */

@@ -36,4 +36,13 @@ const asignarCasoValidator = [
     .isInt({ min: 1 }).withMessage('Debes seleccionar un tecnico'),
 ];
 
-module.exports = { crearCasoValidator, resolverCasoValidator, asignarCasoValidator };
+const reasignarCasoValidator = [
+  body('tecnico_id')
+    .isInt({ min: 1 }).withMessage('Debes seleccionar un tecnico'),
+  body('motivo')
+    .optional({ checkFalsy: true })
+    .trim()
+    .isLength({ max: 255 }).withMessage('El motivo es demasiado largo'),
+];
+
+module.exports = { crearCasoValidator, resolverCasoValidator, asignarCasoValidator, reasignarCasoValidator };

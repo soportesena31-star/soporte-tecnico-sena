@@ -6,13 +6,14 @@ import {
   TrendingUp, Clock, CheckCircle, AlertCircle, RotateCcw, Search, Filter,
   ChevronDown, ChevronUp, Edit2, Download, LogOut, Menu,
   Plus, X, Bell, Shield, QrCode, Trash2, Save, Eye, EyeOff,
-  ArrowUpRight, ArrowDownRight, Minus, AlertTriangle, UserPlus, Mail
+  ArrowUpRight, ArrowDownRight, Minus, AlertTriangle, UserPlus, Mail, RefreshCw
 } from 'lucide-react'
 import {
   BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer,
   PieChart, Pie, Cell, Legend, AreaChart, Area
 } from 'recharts'
 import { STATUS_COLORS, PRIORITY_COLORS, formatDate, type Case, type Space } from '../data/mockData'
+import ReasignarModal from './ReasignarModal'
 
 type Section = 'dashboard' | 'cases' | 'spaces' | 'technicians' | 'categories' | 'reports' | 'history' | 'settings'
 
@@ -34,6 +35,7 @@ interface Props {
   onToggleSpace: (id: string, active: boolean) => Promise<void>
   onInvitar: (data: { email: string; nombre: string; rol_id: string }) => Promise<{ correo_enviado: boolean; motivo?: string }>
   onAssignCase: (caseId: string, tecnicoId: string) => Promise<void>
+  onReassignCase: (caseId: string, tecnicoId: string, motivo: string) => Promise<void>
   onEditarTecnico: (id: string, datos: { nombre: string; email: string; especialidad?: string; rol_id: string; activo: boolean }) => Promise<void>
   onCrearCategoria: (datos: { nombre: string; prioridad: string }) => Promise<void>
   onEditarCategoria: (id: string, datos: { nombre: string; prioridad: string }) => Promise<void>
@@ -54,7 +56,7 @@ const NAV = [
 
 const CATEGORY_COLORS = ['#39A900', '#2563EB', '#EF4444', '#8B5CF6', '#F59E0B', '#06B6D4', '#9333EA', '#EA580C']
 
-export default function AdminDashboard({ onLogout, adminName, cases, spaces, technicians, categories, historyLog, roles, onCreateSpace, onUpdateSpace, onToggleSpace, onInvitar, onAssignCase, onEditarTecnico, onCrearCategoria, onEditarCategoria, onEliminarCategoria }: Props) {
+export default function AdminDashboard({ onLogout, adminName, cases, spaces, technicians, categories, historyLog, roles, onCreateSpace, onUpdateSpace, onToggleSpace, onInvitar, onAssignCase, onReassignCase, onEditarTecnico, onCrearCategoria, onEditarCategoria, onEliminarCategoria }: Props) {
   const [section, setSection] = useState<Section>('dashboard')
   const [sidebarOpen, setSidebarOpen] = useState(false)
   const [tecnicoFiltro, setTecnicoFiltro] = useState<string | null>(null)
@@ -202,7 +204,7 @@ export default function AdminDashboard({ onLogout, adminName, cases, spaces, tec
         {/* Content */}
         <div className="flex-1 p-4 lg:p-6 overflow-auto">
           {section === 'dashboard' && <DashboardSection metrics={metrics} cases={cases} onNavigate={s => setSection(s)} />}
-          {section === 'cases' && <CasesSection cases={cases} technicians={technicians} onAssignCase={onAssignCase} tecnicoFilter={tecnicoFiltro} onTecnicoFilterChange={setTecnicoFiltro} />}
+          {section === 'cases' && <CasesSection cases={cases} technicians={technicians} onAssignCase={onAssignCase} onReassignCase={onReassignCase} tecnicoFilter={tecnicoFiltro} onTecnicoFilterChange={setTecnicoFiltro} />}
           {section === 'spaces' && <SpacesSection spaces={spaces} cases={cases} onCreateSpace={onCreateSpace} onUpdateSpace={onUpdateSpace} onToggleSpace={onToggleSpace} />}
           {section === 'technicians' && <TechniciansSection technicians={technicians} cases={cases} roles={roles} onInvitar={onInvitar} onEditarTecnico={onEditarTecnico} onVerCasos={(id) => { setTecnicoFiltro(id); setSection('cases') }} />}
           {section === 'categories' && <CategoriesSection categories={categories} onCrear={onCrearCategoria} onEditar={onEditarCategoria} onEliminar={onEliminarCategoria} />}
@@ -444,7 +446,7 @@ function DashboardSection({ metrics, cases, onNavigate }: { metrics: Record<stri
 /* ══════════════════════════════════════════
    CASES
 ══════════════════════════════════════════ */
-function CasesSection({ cases, technicians, onAssignCase, tecnicoFilter, onTecnicoFilterChange }: { cases: Case[]; technicians: Technician[]; onAssignCase: Props['onAssignCase']; tecnicoFilter: string | null; onTecnicoFilterChange: (id: string | null) => void }) {
+function CasesSection({ cases, technicians, onAssignCase, onReassignCase, tecnicoFilter, onTecnicoFilterChange }: { cases: Case[]; technicians: Technician[]; onAssignCase: Props['onAssignCase']; onReassignCase: Props['onReassignCase']; tecnicoFilter: string | null; onTecnicoFilterChange: (id: string | null) => void }) {
   const [search, setSearch] = useState('')
   const [statusFilter, setStatusFilter] = useState('Todos')
   const [priorityFilter, setPriorityFilter] = useState('Todas')
@@ -547,16 +549,18 @@ function CasesSection({ cases, technicians, onAssignCase, tecnicoFilter, onTecni
         )}
       </div>
 
-      {verCaso && <VerDetalleCasoModal caso={verCaso} onClose={() => setVerCaso(null)} />}
+      {verCaso && <VerDetalleCasoModal caso={verCaso} technicians={technicians} onReassignCase={onReassignCase} onClose={() => setVerCaso(null)} />}
     </div>
   )
 }
 
-function VerDetalleCasoModal({ caso, onClose }: { caso: Case; onClose: () => void }) {
+function VerDetalleCasoModal({ caso, technicians, onReassignCase, onClose }: { caso: Case; technicians: Technician[]; onReassignCase: Props['onReassignCase']; onClose: () => void }) {
   const sc = STATUS_COLORS[caso.status]
   const pc = PRIORITY_COLORS[caso.priority]
   const fotos = caso.photos?.length ? caso.photos : caso.photo ? [caso.photo] : []
   const evidencias = caso.evidences?.length ? caso.evidences : caso.evidence ? [caso.evidence] : []
+  const [reassignOpen, setReassignOpen] = useState(false)
+  const puedeReasignar = !['Resuelto', 'Cerrado'].includes(caso.status)
 
   return (
     <div className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4" onClick={onClose}>
@@ -570,7 +574,14 @@ function VerDetalleCasoModal({ caso, onClose }: { caso: Case; onClose: () => voi
             </span>
             <span className={`px-2.5 py-1 rounded-full text-[11px] font-bold ${pc.bg} ${pc.text}`}>{caso.priority}</span>
           </div>
-          <button onClick={onClose} className="text-gray-400 hover:text-gray-600 transition-colors"><X size={20} /></button>
+          <div className="flex items-center gap-2">
+            {puedeReasignar && (
+              <button onClick={() => setReassignOpen(true)} className="flex items-center gap-1.5 text-xs font-bold text-purple-700 bg-purple-50 hover:bg-purple-100 border border-purple-200 rounded-xl px-3 py-2 transition-colors">
+                <RefreshCw size={13} /> Reasignar
+              </button>
+            )}
+            <button onClick={onClose} className="text-gray-400 hover:text-gray-600 transition-colors"><X size={20} /></button>
+          </div>
         </div>
 
         <div className="overflow-y-auto p-5 space-y-4">
@@ -663,6 +674,17 @@ function VerDetalleCasoModal({ caso, onClose }: { caso: Case; onClose: () => voi
           )}
         </div>
       </div>
+
+      {reassignOpen && (
+        <ReasignarModal
+          tecnicoActualId={caso.assignedTo?.id}
+          tecnicos={technicians.filter(t => t.role === 'Técnico').map(t => ({ id: t.id, nombre: t.name }))}
+          onClose={() => setReassignOpen(false)}
+          onConfirm={async (tecnicoId, motivo) => {
+            await onReassignCase(caso.id, tecnicoId, motivo)
+          }}
+        />
+      )}
     </div>
   )
 }

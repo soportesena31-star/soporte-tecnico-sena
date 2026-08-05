@@ -1,8 +1,9 @@
 import { useState, useRef } from 'react'
-import { ChevronLeft, MapPin, Tag, User, Camera, CheckCircle2, AlertTriangle, X, Clock, FileText, UserCheck, ArrowRight, Eye } from 'lucide-react'
+import { ChevronLeft, MapPin, Tag, User, Camera, CheckCircle2, AlertTriangle, X, Clock, FileText, UserCheck, ArrowRight, Eye, RefreshCw } from 'lucide-react'
 import { type Case, PRIORITY_COLORS, formatDate } from '../data/mockData'
 import PhotoPicker, { type PhotoItem } from './PhotoPicker'
 import { urlFoto } from '../api/client'
+import ReasignarModal, { type TecnicoOpcion } from './ReasignarModal'
 
 interface Props {
   caseData: Case
@@ -11,13 +12,17 @@ interface Props {
   onTakeCase: () => Promise<Case>
   onStartWork: () => Promise<Case>
   onResolve: (evidenceFiles: File[], notasResolucion: string) => Promise<Case>
+  /** Si el usuario logueado puede reasignar este caso (tecnico asignado o admin) */
+  puedeReasignar?: boolean
+  tecnicos?: TecnicoOpcion[]
+  onReassign?: (tecnicoId: string, motivo: string) => Promise<Case>
 }
 
 type LocalStatus = 'Abierto' | 'Asignado' | 'En proceso' | 'Resuelto'
 
 const STATUS_STEPS: LocalStatus[] = ['Abierto', 'Asignado', 'En proceso', 'Resuelto']
 
-export default function CaseDetail({ caseData, techName, onBack, onTakeCase, onStartWork, onResolve }: Props) {
+export default function CaseDetail({ caseData, techName, onBack, onTakeCase, onStartWork, onResolve, puedeReasignar, tecnicos, onReassign }: Props) {
   const [caso, setCaso] = useState<Case>(caseData)
   const [notasResolucion, setNotasResolucion] = useState('')
   const [evidencePhotosList, setEvidencePhotosList] = useState<PhotoItem[]>([])
@@ -25,6 +30,8 @@ export default function CaseDetail({ caseData, techName, onBack, onTakeCase, onS
   const [busy, setBusy] = useState(false)
   const [activeTab, setActiveTab] = useState<'info' | 'history'>('info')
   const [viewingPhoto, setViewingPhoto] = useState<string | null>(null)
+  const [reassignOpen, setReassignOpen] = useState(false)
+  const [reassignError, setReassignError] = useState('')
 
   const status: LocalStatus =
     caso.status === 'Resuelto' || caso.status === 'Cerrado' ? 'Resuelto' :
@@ -51,6 +58,17 @@ export default function CaseDetail({ caseData, techName, onBack, onTakeCase, onS
       setCaso(actualizado)
     } finally {
       setBusy(false)
+    }
+  }
+
+  const handleReassign = async (tecnicoId: string, motivo: string) => {
+    if (!onReassign) return
+    try {
+      const actualizado = await onReassign(tecnicoId, motivo)
+      setCaso(actualizado)
+    } catch (err) {
+      setReassignError(err instanceof Error ? err.message : 'No se pudo reasignar el caso')
+      throw err
     }
   }
 
@@ -152,6 +170,11 @@ export default function CaseDetail({ caseData, techName, onBack, onTakeCase, onS
             <button onClick={handleStartWork} disabled={busy} className="w-full bg-amber-500 text-white py-4 rounded-2xl font-black text-sm flex items-center justify-center gap-2 shadow-lg hover:bg-amber-600 active:scale-[0.98] transition-all disabled:opacity-70">
               {busy ? 'Iniciando...' : <>Iniciar trabajo <ArrowRight size={16} /> En proceso</>}
             </button>
+            {puedeReasignar && (
+              <button onClick={() => setReassignOpen(true)} className="w-full bg-white border-2 border-purple-200 text-purple-700 py-3 rounded-2xl font-bold text-sm flex items-center justify-center gap-2 hover:bg-purple-50 active:scale-[0.98] transition-all">
+                <RefreshCw size={16} /> Reasignar a otro técnico
+              </button>
+            )}
           </div>
         )}
 
@@ -252,6 +275,15 @@ export default function CaseDetail({ caseData, techName, onBack, onTakeCase, onS
                 >
                   <CheckCircle2 size={20} /> {busy ? 'Guardando...' : 'Marcar como resuelto'}
                 </button>
+
+                {puedeReasignar && (
+                  <button
+                    onClick={() => setReassignOpen(true)}
+                    className="w-full bg-white border-2 border-purple-200 text-purple-700 py-3 rounded-2xl font-bold text-sm flex items-center justify-center gap-2 hover:bg-purple-50 active:scale-[0.98] transition-all"
+                  >
+                    <RefreshCw size={16} /> Reasignar a otro técnico
+                  </button>
+                )}
               </>
             )}
 
@@ -355,6 +387,23 @@ export default function CaseDetail({ caseData, techName, onBack, onTakeCase, onS
             </button>
             <img src={viewingPhoto} alt="Imagen" className="w-full max-h-[85vh] object-contain" />
           </div>
+        </div>
+      )}
+
+      {/* Modal Reasignar */}
+      {reassignOpen && (
+        <ReasignarModal
+          tecnicoActualId={caso.assignedTo?.id}
+          tecnicos={tecnicos || []}
+          onClose={() => { setReassignOpen(false); setReassignError('') }}
+          onConfirm={handleReassign}
+        />
+      )}
+      {reassignError && (
+        <div className="fixed bottom-4 left-4 right-4 z-[80] sm:left-auto sm:right-6 sm:max-w-sm bg-red-600 text-white rounded-xl p-4 text-sm font-medium shadow-lg flex items-start gap-2">
+          <AlertTriangle size={15} className="mt-0.5 flex-shrink-0" />
+          <span className="flex-1">{reassignError}</span>
+          <button onClick={() => setReassignError('')} className="text-white/70 hover:text-white"><X size={15} /></button>
         </div>
       )}
     </div>
