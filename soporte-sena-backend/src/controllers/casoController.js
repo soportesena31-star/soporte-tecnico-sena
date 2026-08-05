@@ -159,7 +159,7 @@ async function consultarPorNumero(req, res, next) {
       include: [
         { model: Espacio, as: 'espacio', attributes: ['nombre', 'tipo'] },
         { model: Categoria, as: 'categoria', attributes: ['nombre'] },
-        { model: Usuario, as: 'tecnico', attributes: ['nombre'] },
+        { model: Usuario, as: 'tecnico', attributes: ['id', 'nombre'] },
         {
           model: HistorialCaso,
           as: 'historial',
