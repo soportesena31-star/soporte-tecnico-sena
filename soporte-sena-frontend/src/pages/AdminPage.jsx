@@ -6,6 +6,7 @@ import {
   mapCasoResumen, mapEspacio, mapTecnico, mapHistorialGlobal, tipoEspacioAApi, PRIORIDAD_DISPLAY,
 } from '../api/mappers'
 import { useAuth } from '../context/AuthContext'
+import { usarBadgePendientes } from '../hooks/useAppBadge'
 
 export default function AdminPage() {
   const navigate = useNavigate()
@@ -48,6 +49,10 @@ export default function AdminPage() {
   useEffect(() => {
     cargarTodo().catch((err) => setErrorCarga(err.message || 'No se pudo cargar el panel')).finally(() => setCargando(false))
   }, [cargarTodo])
+
+  // Badge del icono: casos abiertos (sin atender) para el administrador.
+  const pendientes = cargando || !datos ? null : datos.cases.filter((c) => c.status === 'Abierto').length
+  usarBadgePendientes(pendientes)
 
   const handleCreateSpace = async ({ name, type, sede }) => {
     await api.espacios.crear({ nombre: name, tipo: tipoEspacioAApi(type), sede })

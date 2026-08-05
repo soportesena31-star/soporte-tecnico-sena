@@ -4,6 +4,7 @@ import TechnicianDashboard from '../components/TechnicianDashboard'
 import { api } from '../api/client'
 import { mapCasoResumen } from '../api/mappers'
 import { useAuth } from '../context/AuthContext'
+import { usarBadgePendientes } from '../hooks/useAppBadge'
 
 export default function TecnicoPage() {
   const navigate = useNavigate()
@@ -19,6 +20,12 @@ export default function TecnicoPage() {
   useEffect(() => {
     cargarCasos().finally(() => setCargando(false))
   }, [cargarCasos])
+
+  // Badge del icono: casos sin atender asignados a este tecnico.
+  const pendientes = cargando
+    ? null
+    : cases.filter((c) => c.assignedTo?.id === String(usuario.id) && ['Abierto', 'Asignado', 'En proceso'].includes(c.status)).length
+  usarBadgePendientes(pendientes)
 
   if (cargando) {
     return (
