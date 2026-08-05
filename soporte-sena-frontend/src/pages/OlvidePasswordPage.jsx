@@ -36,7 +36,7 @@ export default function OlvidePasswordPage() {
             <div className="text-center py-4">
               <CheckCircle size={40} className="text-sena-green mx-auto mb-3" />
               <p className="font-bold text-gray-900">Revisa tu correo</p>
-              <p className="text-sm text-gray-500 mt-1">Si {email} está registrado, te enviamos un enlace para restablecer tu contraseña. Vence en 1 hora.</p>
+              <p className="text-sm text-gray-500 mt-1">Te enviamos un enlace a {email}. Vence en 1 hora.</p>
             </div>
           ) : (
             <>

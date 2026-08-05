@@ -131,8 +131,8 @@ administrador es que un admin la invite desde el panel. Ambos flujos
   datos solo se guarda su hash SHA-256, nunca el token en claro.
 - Invitaciones vencen a las 48h, restablecimientos a la 1h.
 - Un token es de un solo uso (`usado_at`); reusarlo da 404.
-- `/auth/olvide-password` responde igual exista o no el correo, para no
-  revelar que cuentas estan registradas.
+- `/auth/olvide-password` responde 404 "correo no registrado" si la cuenta no
+  existe (o esta inactiva); solo envia el correo a cuentas registradas.
 
 El envio real de correos usa SMTP con [nodemailer](https://nodemailer.com)
 (por defecto preparado para Gmail con "Contraseña de aplicacion"). Sin las

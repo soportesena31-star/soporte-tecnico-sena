@@ -1,12 +1,11 @@
 const jwt = require('jsonwebtoken');
 const { Usuario, Role, TokenAcceso } = require('../models');
 const { successResponse, errorResponse } = require('../utils/response');
-const { ERR_CREDENCIALES_INVALIDAS, ERR_TOKEN_INVALIDO } = require('../utils/errorCodes');
+const { ERR_CREDENCIALES_INVALIDAS, ERR_TOKEN_INVALIDO, ERR_NOT_FOUND, ERR_INTERNO } = require('../utils/errorCodes');
 const { generarToken, hashearToken } = require('../utils/tokens');
 const { enviarRestablecimiento } = require('../utils/mailer');
 
 const HORAS_EXPIRACION_RESET = 1;
-const MENSAJE_GENERICO_RESET = 'Si el correo existe en el sistema, te enviamos instrucciones para restablecer tu contrasena';
 
 async function login(req, res, next) {
   try {
@@ -41,25 +40,31 @@ async function olvidePassword(req, res, next) {
     const { email } = req.body;
     const usuario = await Usuario.findOne({ where: { email } });
 
-    // Misma respuesta exista o no el usuario, para no revelar que correos
-    // estan registrados en el sistema (evita enumeracion de usuarios).
-    if (usuario && usuario.activo) {
-      const { token, hash } = generarToken();
-      const expira = new Date(Date.now() + HORAS_EXPIRACION_RESET * 60 * 60 * 1000);
-
-      await TokenAcceso.create({
-        tipo: 'restablecimiento',
-        email,
-        usuario_id: usuario.id,
-        token_hash: hash,
-        expira_at: expira,
-      });
-
-      const link = `${process.env.FRONTEND_URL}/restablecer/${token}`;
-      await enviarRestablecimiento({ email, nombre: usuario.nombre, link });
+    if (!usuario || !usuario.activo) {
+      return errorResponse(res, 404, ERR_CORREO_NO_REGISTRADO,
+        'Este correo no pertenece a ningún técnico o administrador del sistema');
     }
 
-    return successResponse(res, 200, null, MENSAJE_GENERICO_RESET);
+    const { token, hash } = generarToken();
+    const expira = new Date(Date.now() + HORAS_EXPIRACION_RESET * 60 * 60 * 1000);
+
+    await TokenAcceso.create({
+      tipo: 'restablecimiento',
+      email,
+      usuario_id: usuario.id,
+      token_hash: hash,
+      expira_at: expira,
+    });
+
+    const link = `${process.env.FRONTEND_URL}/restablecer/${token}`;
+    const resultado = await enviarRestablecimiento({ email, nombre: usuario.nombre, link });
+
+    if (!resultado.enviado) {
+      return errorResponse(res, 500, ERR_CORREO_NO_ENVIADO,
+        'No se pudo enviar el correo de restablecimiento. Intenta de nuevo en unos minutos');
+    }
+
+    return successResponse(res, 200, null, 'Te enviamos las instrucciones a tu correo');
   } catch (err) {
     next(err);
   }
