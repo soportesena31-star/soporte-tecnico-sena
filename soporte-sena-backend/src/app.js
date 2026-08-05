@@ -71,15 +71,20 @@ function probarTcp(host, port, timeoutMs = 10000) {
 }
 
 app.get('/api/_diagnostico/smtp', requireAuth, requireRol('administrador'), async (req, res) => {
-  const host = process.env.SMTP_HOST || 'smtp.gmail.com';
-  const lookup = (family) => new Promise((resolve) => {
-    dns.lookup(host, { family, all: true }, (e, a) => resolve(e ? e.message : a));
-  });
-  const puertos = {};
-  for (const puerto of [465, 587, 443]) {
-    puertos[puerto] = await probarTcp(host, puerto);
+  const objetivos = [
+    ['smtp.gmail.com', 465],
+    ['smtp.gmail.com', 587],
+    ['fcm.googleapis.com', 443],
+    ['google.com', 443],
+    ['api.brevo.com', 443],
+    ['smtp.office365.com', 587],
+    ['smtp.zoho.com', 465],
+  ];
+  const resultados = [];
+  for (const [host, puerto] of objetivos) {
+    resultados.push({ host, puerto, ...await probarTcp(host, puerto, 8000) });
   }
-  res.json({ host, dnsV4: await lookup(4), dnsV6: await lookup(6), puertos });
+  res.json({ resultados });
 });
 
 // Stream SSE en tiempo real (alertas de casos nuevos). Los paneles abiertos
