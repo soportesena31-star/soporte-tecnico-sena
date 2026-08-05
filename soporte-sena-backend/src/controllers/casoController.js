@@ -315,13 +315,16 @@ async function reasignarCaso(req, res, next) {
     }
 
     // Se conserva el estado: si iba en_proceso, sigue en_proceso con el nuevo tecnico.
+    // Ojo: capturar el tecnico anterior ANTES del update (previous() de Sequelize
+    // ya devolveria el valor nuevo tras update()).
+    const tecnicoAnteriorId = caso.tecnico_id;
     await caso.update({
       tecnico_id: tecnicoNuevo.id,
       fecha_asignacion: new Date(),
     });
 
-    const tecnicoAnterior = caso.previous('tecnico_id')
-      ? await Usuario.findByPk(caso.previous('tecnico_id'), { attributes: ['nombre'] })
+    const tecnicoAnterior = tecnicoAnteriorId
+      ? await Usuario.findByPk(tecnicoAnteriorId, { attributes: ['nombre'] })
       : null;
 
     const partes = [
