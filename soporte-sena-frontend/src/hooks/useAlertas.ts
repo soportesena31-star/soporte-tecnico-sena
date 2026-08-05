@@ -52,15 +52,23 @@ function vibrar() {
  * 1. Escucha el stream SSE /api/eventos mientras la app esta abierta y, si
  *    llega un caso nuevo, reproduce el tono de alerta + vibra + notificacion.
  * 2. Suscripcion Web Push (suena aun con la app cerrada, via service worker).
- *    iOS solo muestra el prompt de permiso dentro de un gesto del usuario,
- *    asi que se expone `permisoPendiente` + `activarAlertas()` para que la
- *    UI muestre un boton que dispare la solicitud al ser tocado.
+ *    - Android/Chrome: el prompt de permiso puede pedirse automaticamente.
+ *    - iOS: solo muestra el prompt dentro de un gesto del usuario, asi que se
+ *      expone `permisoPendiente` + `activarAlertas()` para que la UI muestre
+ *      un boton que dispare la solicitud al ser tocado.
+ *    - Si el permiso quedo bloqueado (denied) se expone `permisoDenegado`
+ *      para avisar que debe activarse desde los ajustes del navegador.
  */
 export function useAlertas() {
   const { usuario } = useAuth()
   const sseRef = useRef<EventSource | null>(null)
   const [permisoPendiente, setPermisoPendiente] = useState(false)
+  const [permisoDenegado, setPermisoDenegado] = useState(false)
   const [activando, setActivando] = useState(false)
+
+  const esIOS = () =>
+    /iphone|ipad|ipod/i.test(navigator.userAgent) ||
+    (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1)
 
   const suscribirPush = async () => {
     if (!('serviceWorker' in navigator) || !('PushManager' in window)) return
@@ -90,6 +98,22 @@ export function useAlertas() {
     }
   }
 
+  const evaluarPermiso = useCallback(() => {
+    if (!('Notification' in window)) return
+    const estado = Notification.permission
+    const haySoporte = haySoportePush()
+    if (estado === 'default' && haySoporte) {
+      setPermisoPendiente(true)
+      setPermisoDenegado(false)
+    } else if (estado === 'denied' && haySoporte) {
+      setPermisoPendiente(false)
+      setPermisoDenegado(true)
+    } else {
+      setPermisoPendiente(false)
+      setPermisoDenegado(false)
+    }
+  }, [])
+
   /**
    * Debe llamarse dentro del gesto del usuario (onClick) para que Safari/iOS
    * muestre el prompt de permiso. Suscribe el dispositivo a Web Push.
@@ -99,12 +123,8 @@ export function useAlertas() {
     await pedirPermiso()
     await suscribirPush()
     setActivando(false)
-    if ('Notification' in window && Notification.permission === 'default' && haySoportePush()) {
-      setPermisoPendiente(true)
-    } else {
-      setPermisoPendiente(false)
-    }
-  }, [])
+    evaluarPermiso()
+  }, [evaluarPermiso])
 
   useEffect(() => {
     if (!usuario) return
@@ -140,9 +160,22 @@ export function useAlertas() {
       }
     }
 
-    if ('Notification' in window && Notification.permission === 'default' && haySoportePush()) {
-      setPermisoPendiente(true)
+    const evaluarYActivar = () => {
+      if (!('Notification' in window) || !haySoportePush()) return
+      if (Notification.permission === 'default') {
+        if (esIOS()) {
+          // iOS: el prompt requiere gesto del usuario, se muestra el banner.
+          setPermisoPendiente(true)
+        } else {
+          // Android/Chrome: se puede pedir automaticamente.
+          pedirPermiso().then(() => suscribirPush().finally(evaluarPermiso))
+        }
+      } else {
+        evaluarPermiso()
+      }
     }
+
+    evaluarYActivar()
     conectarSSE()
 
     return () => {
@@ -152,9 +185,9 @@ export function useAlertas() {
         sseRef.current = null
       }
     }
-  }, [usuario])
+  }, [usuario, evaluarPermiso])
 
-  return { permisoPendiente, activando, activarAlertas }
+  return { permisoPendiente, permisoDenegado, activando, activarAlertas }
 }
 
 export function haySoportePush() {
