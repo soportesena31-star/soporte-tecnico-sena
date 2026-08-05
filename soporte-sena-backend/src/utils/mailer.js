@@ -1,27 +1,32 @@
 const nodemailer = require('nodemailer');
+const dns = require('node:dns');
 const logger = require('../config/logger');
 
-let transporter = null;
-function getTransporter() {
+// Gmail (smtp.gmail.com) responde tambien por IPv6; en Railway los
+// contenedores no tienen ruta de salida IPv6 y el socket muere con
+// 'Connection timeout'. Forzamos la resolucion IPv4.
+dns.setDefaultResultOrder('ipv4first');
+
+const transportes = new Map();
+function getTransporter(port) {
   const host = process.env.SMTP_HOST;
   const user = process.env.SMTP_USER;
   const pass = process.env.SMTP_PASS;
   if (!host || !user || !pass) return null;
-  if (!transporter) {
-    const port = Number(process.env.SMTP_PORT || 465);
-    transporter = nodemailer.createTransport({
+  if (!transportes.has(port)) {
+    transportes.set(port, nodemailer.createTransport({
       host,
       port,
       secure: port === 465,
+      connectionTimeout: 30000,
       auth: { user, pass },
-    });
+    }));
   }
-  return transporter;
+  return transportes.get(port);
 }
 
 async function enviarCorreo({ to, subject, html }) {
-  const tr = getTransporter();
-  if (!tr) {
+  if (!process.env.SMTP_HOST || !process.env.SMTP_USER || !process.env.SMTP_PASS) {
     logger.warn('SMTP no configurado: el correo no se envio de verdad, solo queda en el log', {
       to, subject, preview: html.replace(/<[^>]+>/g, ' ').slice(0, 200),
     });
@@ -31,14 +36,24 @@ async function enviarCorreo({ to, subject, html }) {
   const remitente = process.env.SMTP_FROM || process.env.SMTP_USER;
   const from = { name: 'Soporte Técnico SENA', address: remitente };
 
-  try {
-    const info = await tr.sendMail({ from, to, subject, html });
-    logger.info('Correo enviado via SMTP', { to, subject, id: info.messageId });
-    return { enviado: true, id: info.messageId };
-  } catch (err) {
-    logger.error('Fallo el envio por SMTP', { to, subject, error: err.message });
-    return { enviado: false, motivo: err.message };
+  // Reintenta por los puertos 465 (SSL) y 587 (STARTTLS) por si el primer
+  // puerto configurado falla en el entorno.
+  const puertos = [...new Set([Number(process.env.SMTP_PORT) || 465, 465, 587])];
+  const errores = [];
+
+  for (const puerto of puertos) {
+    const tr = getTransporter(puerto);
+    try {
+      const info = await tr.sendMail({ from, to, subject, html });
+      logger.info('Correo enviado via SMTP', { to, subject, puerto, id: info.messageId });
+      return { enviado: true, id: info.messageId, puerto };
+    } catch (err) {
+      errores.push(`${puerto}: ${err.message}`);
+    }
   }
+
+  logger.error('Fallo el envio por SMTP', { to, subject, errores });
+  return { enviado: false, motivo: errores.join(' | ') };
 }
 
 function plantillaInvitacion({ nombre, rolNombre, link }) {
