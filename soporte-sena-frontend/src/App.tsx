@@ -2,7 +2,9 @@ import { Suspense, lazy } from 'react'
 import { BrowserRouter, Routes, Route } from 'react-router-dom'
 import { AuthProvider } from './context/AuthContext'
 import { useAlertas } from './hooks/useAlertas'
+import { useVersionCheck } from './hooks/useVersionCheck'
 import BannerNotificaciones from './components/BannerNotificaciones'
+import VersionBanner from './components/VersionBanner'
 import ProtectedRoute from './components/ProtectedRoute'
 import Landing from './pages/Landing'
 import ReportarPage from './pages/ReportarPage'
@@ -33,6 +35,7 @@ export default function App() {
   // personal logueado. Debe estar dentro de AuthProvider para leer la sesion.
   function AppConAlertas() {
     const alertas = useAlertas()
+    const version = useVersionCheck()
     return (
       <>
         <Routes>
@@ -54,6 +57,7 @@ export default function App() {
           <Route path="*" element={<Landing />} />
         </Routes>
         <BannerNotificaciones {...alertas} />
+        <VersionBanner {...version} />
       </>
     )
   }

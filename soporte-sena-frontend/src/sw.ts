@@ -40,6 +40,15 @@ self.addEventListener('push', (event) => {
   event.waitUntil(self.registration.showNotification(title, options))
 })
 
+// Aviso de nueva version: la app detecta que este SW quedo en 'waiting' y
+// le pide activarse; al activarse se dispara 'controllerchange' y la pagina
+// recarga con la version nueva.
+self.addEventListener('message', (event) => {
+  if (event.data?.type === 'SKIP_WAITING') {
+    self.skipWaiting()
+  }
+})
+
 // Al tocar la notificacion: abre la app (y enfoca la pestana si ya existe).
 self.addEventListener('notificationclick', (event) => {
   event.notification.close()
