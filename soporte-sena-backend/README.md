@@ -134,11 +134,13 @@ administrador es que un admin la invite desde el panel. Ambos flujos
 - `/auth/olvide-password` responde igual exista o no el correo, para no
   revelar que cuentas estan registradas.
 
-El envio real de correos usa [Resend](https://resend.com). Sin
-`RESEND_API_KEY` configurada, el correo se registra en el log del servidor
-en vez de enviarse — util para desarrollo, pero recuerda que **enviar un
-correo real requiere tu propia API key**; no hay forma de probar la entrega
-real sin ella (ver `src/utils/mailer.js`).
+El envio real de correos usa SMTP con [nodemailer](https://nodemailer.com)
+(por defecto preparado para Gmail con "Contraseña de aplicacion"). Sin las
+variables `SMTP_HOST`/`SMTP_USER`/`SMTP_PASS` configuradas, el correo se
+registra en el log del servidor en vez de enviarse — util para desarrollo,
+pero recuerda que **enviar un correo real requiere tus propias credenciales
+SMTP**; no hay forma de probar la entrega real sin ellas (ver
+`src/utils/mailer.js`).
 
 ## Codigo QR
 

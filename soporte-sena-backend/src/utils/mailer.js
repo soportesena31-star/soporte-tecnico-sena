@@ -1,36 +1,42 @@
-const { Resend } = require('resend');
+const nodemailer = require('nodemailer');
 const logger = require('../config/logger');
 
-let resendClient = null;
-function getClient() {
-  if (!process.env.RESEND_API_KEY) return null;
-  if (!resendClient) resendClient = new Resend(process.env.RESEND_API_KEY);
-  return resendClient;
+let transporter = null;
+function getTransporter() {
+  const host = process.env.SMTP_HOST;
+  const user = process.env.SMTP_USER;
+  const pass = process.env.SMTP_PASS;
+  if (!host || !user || !pass) return null;
+  if (!transporter) {
+    const port = Number(process.env.SMTP_PORT || 465);
+    transporter = nodemailer.createTransport({
+      host,
+      port,
+      secure: port === 465,
+      auth: { user, pass },
+    });
+  }
+  return transporter;
 }
 
 async function enviarCorreo({ to, subject, html }) {
-  const client = getClient();
-  const from = process.env.RESEND_FROM_EMAIL || 'Soporte SENA <onboarding@resend.dev>';
-
-  if (!client) {
-    logger.warn('RESEND_API_KEY no configurada: el correo no se envio de verdad, solo queda en el log', {
+  const tr = getTransporter();
+  if (!tr) {
+    logger.warn('SMTP no configurado: el correo no se envio de verdad, solo queda en el log', {
       to, subject, preview: html.replace(/<[^>]+>/g, ' ').slice(0, 200),
     });
-    return { enviado: false, motivo: 'RESEND_API_KEY no configurada' };
+    return { enviado: false, motivo: 'SMTP no configurado' };
   }
 
+  const remitente = process.env.SMTP_FROM || process.env.SMTP_USER;
+  const from = { name: 'Soporte Técnico SENA', address: remitente };
+
   try {
-    const { data, error } = await client.emails.send({
-      from, to, subject, html,
-    });
-    if (error) {
-      logger.error('Resend devolvio un error al enviar el correo', { to, subject, error });
-      return { enviado: false, motivo: error.message || 'Error de Resend' };
-    }
-    logger.info('Correo enviado via Resend', { to, subject, id: data?.id });
-    return { enviado: true, id: data?.id };
+    const info = await tr.sendMail({ from, to, subject, html });
+    logger.info('Correo enviado via SMTP', { to, subject, id: info.messageId });
+    return { enviado: true, id: info.messageId };
   } catch (err) {
-    logger.error('Fallo la llamada a Resend', { to, subject, error: err.message });
+    logger.error('Fallo el envio por SMTP', { to, subject, error: err.message });
     return { enviado: false, motivo: err.message };
   }
 }

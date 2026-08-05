@@ -1,11 +1,9 @@
-// Script de prueba manual para el modulo de correo (Resend).
-// No toca la base de datos ni levanta el servidor: solo prueba que
-// RESEND_API_KEY este bien configurada y que los correos lleguen.
+// Script de prueba manual para el modulo de correo (SMTP con nodemailer).
+// No toca la base de datos ni levanta el servidor: solo prueba que las
+// variables SMTP_* esten bien configuradas y que los correos lleguen.
 //
 // Uso:
 //   1. Ajusta CORREO_DESTINO abajo con el correo al que quieres que llegue la prueba.
-//      (Si usas el remitente de prueba onboarding@resend.dev, Resend solo te
-//      dejara enviar al correo con el que creaste tu cuenta de Resend.)
 //   2. Desde la carpeta soporte-sena-backend, corre:
 //        node test-mailer.js invitacion
 //      o
@@ -19,8 +17,8 @@ const CORREO_DESTINO = 'soportesena31@gmail.com'; // <-- cambia esto
 async function main() {
   const tipo = process.argv[2] || 'invitacion';
 
-  if (!process.env.RESEND_API_KEY) {
-    console.log('RESEND_API_KEY no esta configurada en el .env. El correo no se enviara de verdad.');
+  if (!process.env.SMTP_HOST || !process.env.SMTP_USER || !process.env.SMTP_PASS) {
+    console.log('SMTP_HOST/SMTP_USER/SMTP_PASS no estan configuradas en el .env. El correo no se enviara de verdad.');
   }
 
   let resultado;
