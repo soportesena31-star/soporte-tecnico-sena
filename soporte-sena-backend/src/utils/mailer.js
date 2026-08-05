@@ -26,18 +26,39 @@ function getTransporter(port) {
 }
 
 async function enviarCorreo({ to, subject, html }) {
-  if (!process.env.SMTP_HOST || !process.env.SMTP_USER || !process.env.SMTP_PASS) {
-    logger.warn('SMTP no configurado: el correo no se envio de verdad, solo queda en el log', {
-      to, subject, preview: html.replace(/<[^>]+>/g, ' ').slice(0, 200),
-    });
-    return { enviado: false, motivo: 'SMTP no configurado' };
+  const errores = [];
+
+  // 1er intento: SMTP directo (funciona en desarrollo local; Railway bloquea
+  // los puertos SMTP salientes, asi que en produccion cae al siguiente).
+  if (process.env.SMTP_HOST && process.env.SMTP_USER && process.env.SMTP_PASS) {
+    const resultadoSmtp = await enviarPorSmtp({ to, subject, html });
+    if (resultadoSmtp.enviado) return resultadoSmtp;
+    errores.push(resultadoSmtp.motivo);
   }
 
+  // 2do intento: API REST de Brevo por HTTPS (funciona desde Railway).
+  if (process.env.BREVO_API_KEY) {
+    const resultadoBrevo = await enviarPorBrevo({ to, subject, html });
+    if (resultadoBrevo.enviado) return resultadoBrevo;
+    errores.push(resultadoBrevo.motivo);
+  }
+
+  if (errores.length) {
+    logger.error('Fallo el envio del correo', { to, subject, errores });
+    return { enviado: false, motivo: errores.join(' | ') };
+  }
+
+  logger.warn('SMTP/Brevo no configurados: el correo no se envio de verdad, solo queda en el log', {
+    to, subject, preview: html.replace(/<[^>]+>/g, ' ').slice(0, 200),
+  });
+  return { enviado: false, motivo: 'Correo no configurado' };
+}
+
+async function enviarPorSmtp({ to, subject, html }) {
   const remitente = process.env.SMTP_FROM || process.env.SMTP_USER;
   const from = { name: 'Soporte Técnico SENA', address: remitente };
 
-  // Reintenta por los puertos 465 (SSL) y 587 (STARTTLS) por si el primer
-  // puerto configurado falla en el entorno.
+  // Reintenta por los puertos 465 (SSL) y 587 (STARTTLS).
   const puertos = [...new Set([Number(process.env.SMTP_PORT) || 465, 465, 587])];
   const errores = [];
 
@@ -52,8 +73,44 @@ async function enviarCorreo({ to, subject, html }) {
     }
   }
 
-  logger.error('Fallo el envio por SMTP', { to, subject, errores });
-  return { enviado: false, motivo: errores.join(' | ') };
+  return { enviado: false, motivo: `SMTP: ${errores.join(' | ')}` };
+}
+
+async function enviarPorBrevo({ to, subject, html }) {
+  const remitente = process.env.BREVO_FROM_EMAIL || process.env.SMTP_USER;
+  if (!remitente) {
+    return { enviado: false, motivo: 'Brevo: falta el remitente (BREVO_FROM_EMAIL o SMTP_USER)' };
+  }
+
+  try {
+    const resp = await fetch('https://api.brevo.com/v3/smtp/email', {
+      method: 'POST',
+      headers: {
+        'api-key': process.env.BREVO_API_KEY,
+        'Content-Type': 'application/json',
+        Accept: 'application/json',
+      },
+      body: JSON.stringify({
+        sender: { name: 'Soporte Técnico SENA', email: remitente },
+        to: [{ email: to }],
+        subject,
+        htmlContent: html,
+      }),
+    });
+
+    if (!resp.ok) {
+      const cuerpo = await resp.text();
+      logger.error('Brevo devolvio error', { to, subject, status: resp.status, cuerpo });
+      return { enviado: false, motivo: `Brevo ${resp.status}: ${cuerpo.slice(0, 300)}` };
+    }
+
+    const data = await resp.json();
+    logger.info('Correo enviado via Brevo', { to, subject, id: data.messageId });
+    return { enviado: true, id: data.messageId };
+  } catch (err) {
+    logger.error('Fallo la llamada a Brevo', { to, subject, error: err.message });
+    return { enviado: false, motivo: `Brevo: ${err.message}` };
+  }
 }
 
 function plantillaInvitacion({ nombre, rolNombre, link }) {
