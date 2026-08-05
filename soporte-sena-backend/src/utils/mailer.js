@@ -28,9 +28,10 @@ function getTransporter(port) {
 async function enviarCorreo({ to, subject, html }) {
   const errores = [];
 
-  // 1er intento: SMTP directo (funciona en desarrollo local; Railway bloquea
-  // los puertos SMTP salientes, asi que en produccion cae al siguiente).
-  if (process.env.SMTP_HOST && process.env.SMTP_USER && process.env.SMTP_PASS) {
+  // 1er intento: SMTP directo. Solo fuera de produccion: Railway bloquea los
+  // puertos SMTP salientes y esperar sus timeouts retrasaria el fallback.
+  const enProduccion = process.env.NODE_ENV === 'production';
+  if (!enProduccion && process.env.SMTP_HOST && process.env.SMTP_USER && process.env.SMTP_PASS) {
     const resultadoSmtp = await enviarPorSmtp({ to, subject, html });
     if (resultadoSmtp.enviado) return resultadoSmtp;
     errores.push(resultadoSmtp.motivo);
