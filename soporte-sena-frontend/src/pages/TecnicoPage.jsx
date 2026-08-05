@@ -21,10 +21,10 @@ export default function TecnicoPage() {
     cargarCasos().finally(() => setCargando(false))
   }, [cargarCasos])
 
-  // Badge del icono: casos sin atender asignados a este tecnico.
+  // Badge del icono: casos abiertos sin atender (mismo conteo que el admin).
   const pendientes = cargando
     ? null
-    : cases.filter((c) => c.assignedTo?.id === String(usuario.id) && ['Abierto', 'Asignado', 'En proceso'].includes(c.status)).length
+    : cases.filter((c) => c.status === 'Abierto').length
   usarBadgePendientes(pendientes)
 
   if (cargando) {

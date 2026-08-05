@@ -15,29 +15,11 @@ if (VAPID_PUBLIC && VAPID_PRIVATE) {
 const PUSH_ACTIVO = Boolean(VAPID_PUBLIC && VAPID_PRIVATE);
 
 /**
- * Conteo de casos pendientes por usuario, para el badge del icono de la app:
- * - administrador: casos en estado 'abierto' (por atender/asignar).
- * - tecnico: casos asignados a el en abierto/asignado/en_proceso.
+ * Cantidad de casos en estado 'abierto' (sin atender) para el badge del
+ * icono de la app. Tecnicos y administradores ven el mismo conteo.
  */
 async function contarPendientes() {
-  const casos = await Caso.findAll({
-    attributes: ['estado', 'tecnico_id'],
-    where: { estado: ['abierto', 'asignado', 'en_proceso'] },
-  });
-  const porTecnico = new Map();
-  let abiertos = 0;
-  for (const c of casos) {
-    if (c.estado === 'abierto') abiertos += 1;
-    if (c.tecnico_id) porTecnico.set(c.tecnico_id, (porTecnico.get(c.tecnico_id) || 0) + 1);
-  }
-  return { abiertos, porTecnico };
-}
-
-function pendientesDe(pendientes, usuario) {
-  const rol = usuario?.rol?.nombre;
-  if (rol === 'administrador') return pendientes.abiertos;
-  if (rol === 'tecnico') return pendientes.porTecnico.get(usuario.id) || 0;
-  return 0;
+  return Caso.count({ where: { estado: 'abierto' } });
 }
 
 /**
@@ -68,34 +50,23 @@ async function notificarRoles(rolesPermitidos, payload) {
 
     if (objetivo.length === 0) return;
 
-    // Cada usuario recibe su propio conteo de pendientes para el badge.
-    const pendientes = await contarPendientes().catch(() => null);
+    // Todos los destinatarios reciben el mismo conteo para el badge.
+    const pendientes = await contarPendientes().catch(() => 0);
+    const cuerpo = JSON.stringify({ ...payload, pendientes });
 
-    const porUsuario = new Map();
     for (const s of objetivo) {
-      if (!porUsuario.has(s.usuario.id)) porUsuario.set(s.usuario.id, { usuario: s.usuario, suscripciones: [] });
-      porUsuario.get(s.usuario.id).suscripciones.push(s);
-    }
-
-    for (const { usuario, suscripciones: subs } of porUsuario.values()) {
-      const cuerpo = JSON.stringify({
-        ...payload,
-        pendientes: pendientes ? pendientesDe(pendientes, usuario) : 0,
-      });
-      for (const s of subs) {
-        try {
-          await webpush.sendNotification({
-            endpoint: s.endpoint,
-            keys: { p256dh: s.p256dh, auth: s.auth },
-          }, cuerpo, { TTL: 60 });
-        } catch (err) {
-          if (err.statusCode === 404 || err.statusCode === 410) {
-            // La suscripcion ya no existe: el dispositivo se desuscribio o expiro.
-            await s.destroy().catch(() => {});
-            logger.info('Suscripcion push vencida, eliminada', { id: s.id });
-          } else {
-            logger.error('Error enviando push', { statusCode: err.statusCode, message: err.message });
-          }
+      try {
+        await webpush.sendNotification({
+          endpoint: s.endpoint,
+          keys: { p256dh: s.p256dh, auth: s.auth },
+        }, cuerpo, { TTL: 60 });
+      } catch (err) {
+        if (err.statusCode === 404 || err.statusCode === 410) {
+          // La suscripcion ya no existe: el dispositivo se desuscribio o expiro.
+          await s.destroy().catch(() => {});
+          logger.info('Suscripcion push vencida, eliminada', { id: s.id });
+        } else {
+          logger.error('Error enviando push', { statusCode: err.statusCode, message: err.message });
         }
       }
     }
@@ -115,12 +86,8 @@ async function notificarUsuario(usuarioId, payload) {
     const suscripciones = await PushSuscripcion.findAll({ where: { usuario_id: usuarioId } });
     if (suscripciones.length === 0) return;
 
-    const usuario = await Usuario.findByPk(usuarioId, { include: [{ model: Role, as: 'rol' }] });
-    const pendientes = await contarPendientes().catch(() => null);
-    const cuerpo = JSON.stringify({
-      ...payload,
-      pendientes: pendientes ? pendientesDe(pendientes, usuario) : 0,
-    });
+    const pendientes = await contarPendientes().catch(() => 0);
+    const cuerpo = JSON.stringify({ ...payload, pendientes });
 
     for (const s of suscripciones) {
       try {
