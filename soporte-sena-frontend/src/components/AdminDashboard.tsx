@@ -1006,17 +1006,18 @@ function SpacesSection({ spaces, cases, onCreateSpace, onUpdateSpace }: { spaces
           <p className="text-xs text-gray-400">{filtered.length} espacio{filtered.length !== 1 ? 's' : ''}</p>
           <p className="text-xs text-sena-green font-semibold">{spaces.filter(s => s.active).length} activos</p>
         </div>
-        <table className="w-full text-sm">
-          <thead>
-            <tr className="bg-gray-50/80">
-              <th className="px-5 py-3 text-left text-[11px] font-bold text-gray-400 uppercase tracking-wider">Nombre</th>
-              <th className="px-5 py-3 text-left text-[11px] font-bold text-gray-400 uppercase tracking-wider">Tipo</th>
-              <th className="px-5 py-3 text-left text-[11px] font-bold text-gray-400 uppercase tracking-wider">Sede</th>
-              <th className="px-5 py-3 text-left text-[11px] font-bold text-gray-400 uppercase tracking-wider">Casos</th>
-              <th className="px-5 py-3 text-left text-[11px] font-bold text-gray-400 uppercase tracking-wider">Estado</th>
-              <th className="px-5 py-3 text-left text-[11px] font-bold text-gray-400 uppercase tracking-wider">Acciones</th>
-            </tr>
-          </thead>
+        <div className="overflow-x-auto">
+          <table className="w-full text-sm min-w-[640px]">
+            <thead>
+              <tr className="bg-gray-50/80">
+                <th className="px-5 py-3 text-left text-[11px] font-bold text-gray-400 uppercase tracking-wider">Nombre</th>
+                <th className="px-5 py-3 text-left text-[11px] font-bold text-gray-400 uppercase tracking-wider">Tipo</th>
+                <th className="px-5 py-3 text-left text-[11px] font-bold text-gray-400 uppercase tracking-wider">Sede</th>
+                <th className="px-5 py-3 text-left text-[11px] font-bold text-gray-400 uppercase tracking-wider">Casos</th>
+                <th className="px-5 py-3 text-left text-[11px] font-bold text-gray-400 uppercase tracking-wider">Estado</th>
+                <th className="px-5 py-3 text-left text-[11px] font-bold text-gray-400 uppercase tracking-wider">Acciones</th>
+              </tr>
+            </thead>
           <tbody className="divide-y divide-gray-50">
             {filtered.map(s => {
               const casesInSpace = cases.filter(c => c.space.id === s.id).length
@@ -1042,7 +1043,8 @@ function SpacesSection({ spaces, cases, onCreateSpace, onUpdateSpace }: { spaces
               )
             })}
           </tbody>
-        </table>
+          </table>
+        </div>
       </div>
 
       {/* Modal */}
