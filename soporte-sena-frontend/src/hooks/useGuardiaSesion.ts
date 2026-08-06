@@ -96,20 +96,19 @@ export function useGuardiaSesion() {
     }
   }, [usuario])
 
-  // Boton atras: si estando logueado se aterriza en /login o en la portada,
-  // se restaura la pantalla de trabajo y se pregunta antes de salir.
+  // Boton atras / reapertura de la PWA: si el usuario logueado esta en una
+  // pagina publica (portada, login, reportar, consultar...), es porque salio
+  // del area de trabajo con el boton atras (o la app reabrio en la portada).
+  // Se restaura su ultima pantalla de trabajo y, si venia de la app, se
+  // pregunta si quiere cerrar sesion. Funciona con el estado del router, no
+  // con eventos popstate (que compiten con el procesamiento interno del
+  // router), asi que es identico en iOS, Android y PC.
   useEffect(() => {
-    const onPop = () => {
-      if (!usuarioRef.current) return
-      const p = window.location.pathname
-      if (p === '/login' || p === '/') {
-        navigate(ultimaRutaRef.current || inicioPorRol(usuarioRef.current), { replace: true })
-        setDialogo('atras')
-      }
-    }
-    window.addEventListener('popstate', onPop)
-    return () => window.removeEventListener('popstate', onPop)
-  }, [navigate])
+    if (!usuario || esRutaProtegida(location.pathname)) return
+    const veniaDeLaApp = Boolean(ultimaRutaRef.current)
+    navigate(ultimaRutaRef.current || inicioPorRol(usuario), { replace: true })
+    if (veniaDeLaApp) setDialogo('atras')
+  }, [usuario, location.pathname, navigate])
 
   const cancelar = () => setDialogo(null)
 
