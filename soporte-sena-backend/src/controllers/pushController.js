@@ -2,6 +2,21 @@ const { PushSuscripcion } = require('../models');
 const { successResponse, errorResponse } = require('../utils/response');
 const { ERR_VALIDATION, ERR_NOT_FOUND } = require('../utils/errorCodes');
 
+// Claves validas de Web Push: p256dh es una clave publica ECDH P-256 de
+// exactamente 65 bytes y auth una de 16 (RFC 8291). Se validan decodificando
+// el base64, para que una suscripcion corrupta o de prueba (p. ej. 'abc')
+// jamás se guarde y rompa el envio para ese dispositivo.
+function clavesValidas(endpoint, keys) {
+  if (typeof endpoint !== 'string' || !/^https?:\/\//.test(endpoint)) return false;
+  if (typeof keys?.p256dh !== 'string' || typeof keys?.auth !== 'string') return false;
+  try {
+    return Buffer.from(keys.p256dh, 'base64').length === 65
+      && Buffer.from(keys.auth, 'base64').length === 16;
+  } catch {
+    return false;
+  }
+}
+
 // Guarda la suscripcion Web Push del dispositivo del usuario logueado.
 // Si ya existia el mismo endpoint (mismo dispositivo), se actualiza en vez
 // de duplicar (la clave UNIQUE lo garantiza con upsert).
@@ -10,6 +25,9 @@ async function suscribir(req, res, next) {
     const { endpoint, keys } = req.body;
     if (!endpoint || !keys?.p256dh || !keys?.auth) {
       return errorResponse(res, 400, ERR_VALIDATION, 'Suscripcion incompleta (endpoint y claves obligatorias)');
+    }
+    if (!clavesValidas(endpoint, keys)) {
+      return errorResponse(res, 400, ERR_VALIDATION, 'Claves de suscripcion invalidas (p256dh debe ser de 65 bytes y auth de 16)');
     }
 
     const userAgent = (req.headers['user-agent'] || '').slice(0, 255);

@@ -172,6 +172,10 @@ export function useAlertas() {
         }
       } else {
         evaluarPermiso()
+        // Con permiso ya concedido tambien se (re)envia la suscripcion: es
+        // idempotente y repara el dispositivo si su fila falta o quedo
+        // corrupta en el backend (p. ej. el push deja de llegar).
+        if (Notification.permission === 'granted') suscribirPush()
       }
     }
 
