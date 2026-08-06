@@ -76,6 +76,20 @@ self.addEventListener('message', (event) => {
   }
 })
 
+// Auto-actualizacion: sin esto, el SW nuevo queda en 'waiting' hasta que el
+// usuario toque el banner de version (o cierre todas las pestanas), y mientras
+// tanto el telefono sigue con el SW viejo: notifica pero no aplica el badge.
+// Con skipWaiting en install + clients.claim, la proxima vez que se abre la
+// app el SW nuevo toma el control y los push siguientes actualizan el badge
+// al instante.
+self.addEventListener('install', () => {
+  self.skipWaiting()
+})
+
+self.addEventListener('activate', (event) => {
+  event.waitUntil(self.clients.claim())
+})
+
 // Al tocar la notificacion: abre la app directamente en el caso mencionado.
 // El backend incluye data.url segun el rol (tecnico: /casos/NUM; admin:
 // /admin?caso=NUM). Si ya hay una pestana en esa seccion, se enfoca y navega;
