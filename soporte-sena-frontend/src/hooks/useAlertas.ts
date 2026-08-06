@@ -147,9 +147,9 @@ export function useAlertas() {
       es.addEventListener('nuevo_caso', () => {
         sonarAlerta()
         vibrar()
-        if ('Notification' in window && Notification.permission === 'granted' && document.visibilityState === 'visible') {
-          new Notification('Nuevo caso de soporte', { body: 'Llego un caso nuevo', icon: '/icons/icon-192.png' })
-        }
+        // La notificacion la muestra el service worker del push (funciona
+        // incluso con la app cerrada); aqui solo se suena y vibra en el panel
+        // abierto. Crear otra con new Notification duplicaria el aviso.
       })
 
       es.onerror = () => {

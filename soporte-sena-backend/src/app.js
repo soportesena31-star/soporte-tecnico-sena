@@ -3,13 +3,14 @@ const cors = require('cors');
 const helmet = require('helmet');
 const morgan = require('morgan');
 const path = require('path');
+const jwt = require('jsonwebtoken');
 
 require('dotenv').config();
 
 const routes = require('./routes');
 const { errorHandler } = require('./middleware/errorHandler');
 const logger = require('./config/logger');
-const { ERR_NOT_FOUND } = require('./utils/errorCodes');
+const { ERR_NOT_FOUND, ERR_UNAUTHORIZED, ERR_FORBIDDEN } = require('./utils/errorCodes');
 const { suscribir: suscribirSSE } = require('./services/eventBus');
 
 const app = express();
@@ -54,8 +55,27 @@ app.use('/uploads', express.static(path.join(__dirname, '..', 'uploads')));
 app.get('/api/health', (req, res) => res.json({ status: 'ok' }));
 
 // Stream SSE en tiempo real (alertas de casos nuevos). Los paneles abiertos
-// se conectan aqui; si el navegador lo cierra, se limpia solo.
+// se conectan aqui; si el navegador lo cierra, se limpia solo. El token que
+// envia el panel se valida y solo el personal (tecnico/administrador) puede
+// conectarse: sin token valido el stream devuelve 401 y no abre la conexion.
 app.get('/api/eventos', (req, res) => {
+  const token = String(req.query.token || '');
+  let payload = null;
+  try {
+    payload = jwt.verify(token, process.env.JWT_SECRET);
+  } catch {
+    return res.status(401).json({
+      success: false,
+      error: { code: ERR_UNAUTHORIZED, message: 'Token invalido o vencido' },
+    });
+  }
+  if (!['tecnico', 'administrador'].includes(payload.rol)) {
+    return res.status(403).json({
+      success: false,
+      error: { code: ERR_FORBIDDEN, message: 'Sin permiso para este stream' },
+    });
+  }
+
   res.setHeader('Content-Type', 'text/event-stream');
   res.setHeader('Cache-Control', 'no-cache');
   res.setHeader('Connection', 'keep-alive');
