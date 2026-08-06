@@ -69,25 +69,12 @@ self.addEventListener('push', (event) => {
 
 // Aviso de nueva version: la app detecta que este SW quedo en 'waiting' y
 // le pide activarse; al activarse se dispara 'controllerchange' y la pagina
-// recarga con la version nueva.
+// recarga con la version nueva. Es el mecanismo de actualizacion: el banner
+// "Actualizar nueva version" es quien controla cuando se activa el SW nuevo.
 self.addEventListener('message', (event) => {
   if (event.data?.type === 'SKIP_WAITING') {
     self.skipWaiting()
   }
-})
-
-// Auto-actualizacion: sin esto, el SW nuevo queda en 'waiting' hasta que el
-// usuario toque el banner de version (o cierre todas las pestanas), y mientras
-// tanto el telefono sigue con el SW viejo: notifica pero no aplica el badge.
-// Con skipWaiting en install + clients.claim, la proxima vez que se abre la
-// app el SW nuevo toma el control y los push siguientes actualizan el badge
-// al instante.
-self.addEventListener('install', () => {
-  self.skipWaiting()
-})
-
-self.addEventListener('activate', (event) => {
-  event.waitUntil(self.clients.claim())
 })
 
 // Al tocar la notificacion: abre la app directamente en el caso mencionado.
