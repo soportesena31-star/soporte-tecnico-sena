@@ -4,16 +4,16 @@ export { API_URL };
 
 const TOKEN_KEY = 'sena_soporte_token';
 
-// sessionStorage aisla la sesion por pestana: asi se puede estar logueado con
-// un rol (ej. administrador) en una pestana y con otro (tecnico) en otra, sin
-// que una sobrescriba la sesion de la otra. Se conserva al recargar la pestana.
+// localStorage conserva la sesion al cerrar la app: solo se pierde al cerrar
+// sesion manualmente o tras 30 minutos de inactividad (useGuardiaSesion).
+// Antes se usaba sessionStorage y la sesion moria al cerrar la app.
 export function getToken() {
-  return sessionStorage.getItem(TOKEN_KEY);
+  return localStorage.getItem(TOKEN_KEY);
 }
 
 export function setToken(token) {
-  if (token) sessionStorage.setItem(TOKEN_KEY, token);
-  else sessionStorage.removeItem(TOKEN_KEY);
+  if (token) localStorage.setItem(TOKEN_KEY, token);
+  else localStorage.removeItem(TOKEN_KEY);
 }
 
 export class ApiError extends Error {

@@ -22,7 +22,7 @@ async function login(req, res, next) {
     const token = jwt.sign(
       { id: usuario.id, rol: usuario.rol.nombre },
       process.env.JWT_SECRET,
-      { expiresIn: '12h' },
+      { expiresIn: '30d' },
     );
 
     return successResponse(res, 200, { token, usuario }, 'Sesion iniciada');
