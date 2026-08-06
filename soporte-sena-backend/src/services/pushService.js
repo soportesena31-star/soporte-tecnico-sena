@@ -23,6 +23,19 @@ async function contarPendientes() {
 }
 
 /**
+ * Ruta de la app a la que lleva la notificacion al tocarla, segun el rol del
+ * destinatario: el tecnico va a su vista del caso y el administrador al panel
+ * con el detalle del caso abierto (?caso=). Se resuelve por suscripcion para
+ * que un mismo push apunte a la ruta correcta para cada quien.
+ */
+function urlDestinoCaso(usuario, numeroCaso) {
+  if (!numeroCaso) return '/';
+  const rol = usuario?.rol?.nombre;
+  if (rol === 'administrador') return `/admin?caso=${encodeURIComponent(numeroCaso)}`;
+  return `/casos/${encodeURIComponent(numeroCaso)}`;
+}
+
+/**
  * Envia una notificacion push a las suscripciones de los usuarios con los
  * roles indicados (ej. tecnico, administrador). Las suscripciones vencidas
  * (404/410) se eliminan para no acumular basura. Nunca lanza: las fallas se
@@ -52,9 +65,11 @@ async function notificarRoles(rolesPermitidos, payload) {
 
     // Todos los destinatarios reciben el mismo conteo para el badge.
     const pendientes = await contarPendientes().catch(() => 0);
-    const cuerpo = JSON.stringify({ ...payload, pendientes });
+    const numeroCaso = payload?.data?.numero_caso;
 
     for (const s of objetivo) {
+      const data = { ...(payload.data || {}), url: urlDestinoCaso(s.usuario, numeroCaso) };
+      const cuerpo = JSON.stringify({ ...payload, data, pendientes });
       try {
         await webpush.sendNotification({
           endpoint: s.endpoint,
@@ -83,13 +98,16 @@ async function notificarRoles(rolesPermitidos, payload) {
 async function notificarUsuario(usuarioId, payload) {
   if (!PUSH_ACTIVO) return;
   try {
+    const usuario = await Usuario.findByPk(usuarioId, { include: [{ model: Role, as: 'rol' }] });
     const suscripciones = await PushSuscripcion.findAll({ where: { usuario_id: usuarioId } });
     if (suscripciones.length === 0) return;
 
     const pendientes = await contarPendientes().catch(() => 0);
-    const cuerpo = JSON.stringify({ ...payload, pendientes });
+    const numeroCaso = payload?.data?.numero_caso;
 
     for (const s of suscripciones) {
+      const data = { ...(payload.data || {}), url: urlDestinoCaso(usuario, numeroCaso) };
+      const cuerpo = JSON.stringify({ ...payload, data, pendientes });
       try {
         await webpush.sendNotification({
           endpoint: s.endpoint,

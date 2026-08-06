@@ -76,20 +76,28 @@ self.addEventListener('message', (event) => {
   }
 })
 
-// Al tocar la notificacion: abre la app (y enfoca la pestana si ya existe).
+// Al tocar la notificacion: abre la app directamente en el caso mencionado.
+// El backend incluye data.url segun el rol (tecnico: /casos/NUM; admin:
+// /admin?caso=NUM). Si ya hay una pestana en esa seccion, se enfoca y navega;
+// si no, se abre una ventana nueva con el caso.
 self.addEventListener('notificationclick', (event) => {
   event.notification.close()
   const registro = self.registration
   if (puedeAplicarBadge(registro)) {
     registro.clearAppBadge().catch(() => {})
   }
-  const url = new URL('/', self.location.origin).toString()
-  event.waitUntil(
-    self.clients.matchAll({ type: 'window', includeUncontrolled: true }).then((clients) => {
-      for (const client of clients) {
-        if ('focus' in client) return client.focus()
-      }
-      return self.clients.openWindow(url)
-    }),
-  )
+  const destino = new URL((event.notification.data as { url?: string })?.url || '/', self.location.origin).toString()
+  event.waitUntil((async () => {
+    const clientes = await self.clients.matchAll({ type: 'window', includeUncontrolled: true })
+    const base = new URL(destino).pathname.split('/')[1] || ''
+    const objetivo = clientes.find((c) => {
+      try { return new URL(c.url).pathname.startsWith(`/${base}`) } catch { return false }
+    }) || (base === '' ? clientes[0] : undefined)
+    if (objetivo) {
+      await objetivo.focus()
+      try { await objetivo.navigate(destino) } catch { /* se queda en la pestana actual */ }
+      return
+    }
+    return self.clients.openWindow(destino)
+  })())
 })

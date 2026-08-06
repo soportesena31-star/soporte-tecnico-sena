@@ -1,5 +1,5 @@
-import { useEffect, useState, useCallback } from 'react'
-import { useNavigate } from 'react-router-dom'
+import { useEffect, useState, useCallback, useRef } from 'react'
+import { useNavigate, useSearchParams } from 'react-router-dom'
 import AdminDashboard from '../components/AdminDashboard'
 import { api } from '../api/client'
 import {
@@ -10,10 +10,24 @@ import { usarBadgePendientes } from '../hooks/useAppBadge'
 
 export default function AdminPage() {
   const navigate = useNavigate()
+  const [searchParams, setSearchParams] = useSearchParams()
   const { usuario, logout } = useAuth()
   const [datos, setDatos] = useState(null)
   const [cargando, setCargando] = useState(true)
   const [errorCarga, setErrorCarga] = useState('')
+
+  // Deep link desde notificacion: ?caso=NUMERO abre ese caso en el panel.
+  // El parametro se consume una vez (por valor) y se limpia para no reabrir
+  // el modal al recargar; asi la campana puede reabrir casos en cualquier
+  // momento con un ?caso= nuevo o repetido.
+  const casoInicial = searchParams.get('caso')
+  const casoConsumido = useRef(null)
+  useEffect(() => {
+    if (casoInicial && casoConsumido.current !== casoInicial) {
+      casoConsumido.current = casoInicial
+      setSearchParams({}, { replace: true })
+    }
+  }, [casoInicial, setSearchParams])
 
   const cargarTodo = useCallback(async () => {
     const [casosRes, espaciosRes, usuariosRes, categoriasRes, historialRes, rolesRes] = await Promise.all([
@@ -146,6 +160,7 @@ export default function AdminPage() {
       onCrearCategoria={handleCrearCategoria}
       onEditarCategoria={handleEditarCategoria}
       onEliminarCategoria={handleEliminarCategoria}
+      casoInicial={casoInicial}
       onLogout={() => { logout(); navigate('/') }}
     />
   )

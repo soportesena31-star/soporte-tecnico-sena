@@ -24,6 +24,7 @@ const FILTERS: Filter[] = ['Todos', 'Nuevos', 'Alta', 'Mis casos', 'En proceso']
 export default function TechnicianDashboard({ techName, techEmail, cases, currentTechId, onCaseSelect, onLogout }: Props) {
   const [tab, setTab] = useState<Tab>('home')
   const [filter, setFilter] = useState<Filter>('Todos')
+  const [estadoMisCasos, setEstadoMisCasos] = useState<'todos' | 'asignado' | 'en_proceso'>('todos')
   const [search, setSearch] = useState('')
   const [profileOpen, setProfileOpen] = useState(false)
   const [readNotifs, setReadNotifs] = useState<string[]>([])
@@ -49,13 +50,16 @@ export default function TechnicianDashboard({ techName, techEmail, cases, curren
     return matchFilter && matchSearch
   })
 
-  // El tab "Mis casos" debe listar UNICAMENTE los casos asignados o tomados por
-  // el tecnico actual, sin importar el filtro que este activo. El tab "Casos"
-  // sigue mostrando la lista completa con los filtros normales.
+  // El tab "Mis casos" lista UNICAMENTE los casos de este tecnico en los
+  // estados asignado/en proceso (su cola de trabajo), con filtro por estado.
   const searchMatch = (c: Case) => !search || c.number.toLowerCase().includes(search.toLowerCase()) ||
     c.space.name.toLowerCase().includes(search.toLowerCase()) ||
     c.category.toLowerCase().includes(search.toLowerCase())
-  const visibleCases = tab === 'my-cases' ? myCases.filter(searchMatch) : filteredCases
+  const visibleCases = tab === 'my-cases'
+    ? myCases
+        .filter(c => estadoMisCasos === 'asignado' ? c.status === 'Asignado' : estadoMisCasos === 'en_proceso' ? c.status === 'En proceso' : true)
+        .filter(searchMatch)
+    : filteredCases
 
   // Notificaciones derivadas de los casos reales (no hay backend de push todavia,
   // ver README): alta prioridad sin asignar, y casos mios en proceso hace rato.
@@ -67,6 +71,7 @@ export default function TechnicianDashboard({ techName, techEmail, cases, curren
       time: formatDate(c.createdAt),
       unread: true,
       type: 'urgent' as const,
+      case: c,
     })),
     ...myCases.filter(c => c.status === 'Asignado').map(c => ({
       id: `asignado-${c.id}`,
@@ -75,6 +80,7 @@ export default function TechnicianDashboard({ techName, techEmail, cases, curren
       time: formatDate(c.updatedAt),
       unread: true,
       type: 'assigned' as const,
+      case: c,
     })),
   ]
   const unreadCount = notifications.filter(n => !readNotifs.includes(n.id) && n.unread).length
@@ -217,29 +223,57 @@ export default function TechnicianDashboard({ techName, techEmail, cases, curren
             </div>
           </div>
 
-          {/* Filters */}
-          <div className="px-4 py-3 overflow-x-auto">
-            <div className="flex gap-2 w-max">
-              {FILTERS.map(f => (
+          {/* Filters: en "Casos" los filtros generales; en "Mis casos" solo
+              Todos / Asignados / En proceso, limitados a los casos de este tecnico */}
+          {tab === 'my-cases' ? (
+            <div className="px-4 py-3 flex gap-2">
+              {([
+                { id: 'todos', label: 'Todos', count: myCases.length },
+                { id: 'asignado', label: 'Asignados', count: myCases.filter(c => c.status === 'Asignado').length },
+                { id: 'en_proceso', label: 'En proceso', count: myCases.filter(c => c.status === 'En proceso').length },
+              ] as { id: 'todos' | 'asignado' | 'en_proceso'; label: string; count: number }[]).map(f => (
                 <button
-                  key={f}
-                  onClick={() => setFilter(f)}
+                  key={f.id}
+                  onClick={() => setEstadoMisCasos(f.id)}
                   className={`px-4 py-2 rounded-full text-xs font-bold whitespace-nowrap transition-all ${
-                    filter === f
+                    estadoMisCasos === f.id
                       ? 'bg-sena-green text-white shadow-md shadow-green-200'
                       : 'bg-white text-gray-500 border border-gray-200 hover:border-sena-green/30'
                   }`}
                 >
-                  {f}
-                  {f === 'Alta' && openCases.filter(c => c.priority === 'Alta').length > 0 && (
-                    <span className="ml-1.5 bg-red-500 text-white text-[9px] font-black rounded-full px-1.5 py-0.5">
-                      {cases.filter(c => c.priority === 'Alta').length}
+                  {f.label}
+                  {f.count > 0 && (
+                    <span className={`ml-1.5 rounded-full px-1.5 py-0.5 text-[9px] font-black ${estadoMisCasos === f.id ? 'bg-white/20' : 'bg-gray-100 text-gray-500'}`}>
+                      {f.count}
                     </span>
                   )}
                 </button>
               ))}
             </div>
-          </div>
+          ) : (
+            <div className="px-4 py-3 overflow-x-auto">
+              <div className="flex gap-2 w-max">
+                {FILTERS.map(f => (
+                  <button
+                    key={f}
+                    onClick={() => setFilter(f)}
+                    className={`px-4 py-2 rounded-full text-xs font-bold whitespace-nowrap transition-all ${
+                      filter === f
+                        ? 'bg-sena-green text-white shadow-md shadow-green-200'
+                        : 'bg-white text-gray-500 border border-gray-200 hover:border-sena-green/30'
+                    }`}
+                  >
+                    {f}
+                    {f === 'Alta' && openCases.filter(c => c.priority === 'Alta').length > 0 && (
+                      <span className="ml-1.5 bg-red-500 text-white text-[9px] font-black rounded-full px-1.5 py-0.5">
+                        {cases.filter(c => c.priority === 'Alta').length}
+                      </span>
+                    )}
+                  </button>
+                ))}
+              </div>
+            </div>
+          )}
 
           {/* Cases */}
           <div className="px-4 space-y-3">
@@ -273,7 +307,10 @@ export default function TechnicianDashboard({ techName, techEmail, cases, curren
               return (
                 <button
                   key={n.id}
-                  onClick={() => setReadNotifs(prev => [...prev, n.id])}
+                  onClick={() => {
+                    setReadNotifs(prev => [...prev, n.id])
+                    onCaseSelect(n.case)
+                  }}
                   className={`w-full text-left rounded-2xl p-4 border transition-all ${isRead ? 'bg-white border-gray-100' : 'bg-white border-sena-green/30 shadow-sm shadow-green-50'}`}
                 >
                   <div className="flex items-start gap-3">

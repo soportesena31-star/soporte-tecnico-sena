@@ -1,4 +1,5 @@
 import { useCallback, useMemo, useState, useEffect, useRef } from 'react'
+import { useNavigate } from 'react-router-dom'
 import { api, urlFoto } from '../api/client'
 import { mapCaso } from '../api/mappers'
 import {
@@ -39,6 +40,8 @@ interface Props {
   onCrearCategoria: (datos: { nombre: string; prioridad: string }) => Promise<void>
   onEditarCategoria: (id: string, datos: { nombre: string; prioridad: string }) => Promise<void>
   onEliminarCategoria: (id: string) => Promise<void>
+  /** Numero de caso que debe abrirse al entrar al panel (deep link desde push). */
+  casoInicial?: string | null
 }
 
 
@@ -55,13 +58,20 @@ const NAV = [
 
 const CATEGORY_COLORS = ['#39A900', '#2563EB', '#EF4444', '#8B5CF6', '#F59E0B', '#06B6D4', '#9333EA', '#EA580C']
 
-export default function AdminDashboard({ onLogout, adminName, cases, spaces, technicians, categories, historyLog, roles, onCreateSpace, onUpdateSpace, onToggleSpace, onInvitar, onAssignCase, onReassignCase, onEditarTecnico, onCrearCategoria, onEditarCategoria, onEliminarCategoria }: Props) {
+export default function AdminDashboard({ onLogout, adminName, cases, spaces, technicians, categories, historyLog, roles, onCreateSpace, onUpdateSpace, onToggleSpace, onInvitar, onAssignCase, onReassignCase, onEditarTecnico, onCrearCategoria, onEditarCategoria, onEliminarCategoria, casoInicial }: Props) {
+  const navigate = useNavigate()
   const [section, setSection] = useState<Section>('dashboard')
   const [sidebarOpen, setSidebarOpen] = useState(false)
   const [tecnicoFiltro, setTecnicoFiltro] = useState<string | null>(null)
   const [notifOpen, setNotifOpen] = useState(false)
   const [notifRead, setNotifRead] = useState(false)
   const notifRef = useRef<HTMLDivElement | null>(null)
+
+  // Deep link desde notificacion: llega un ?caso= en la URL y hay que
+  // mostrarlo en la seccion de casos.
+  useEffect(() => {
+    if (casoInicial) setSection('cases')
+  }, [casoInicial])
 
   const notifs = useMemo(() => historyLog.slice(0, 8), [historyLog])
 
@@ -186,10 +196,22 @@ export default function AdminDashboard({ onLogout, adminName, cases, spaces, tec
                     {notifs.length === 0 ? (
                       <li className="px-4 py-6 text-center text-xs text-gray-400">No hay notificaciones recientes</li>
                     ) : notifs.map(item => (
-                      <li key={item.id} className="px-4 py-2.5 border-b border-gray-50 hover:bg-gray-50">
-                        <p className="text-xs font-semibold text-gray-800 capitalize">{item.action}</p>
-                        <p className="text-[11px] text-gray-500 truncate">{item.target || item.actor}</p>
-                        <p className="text-[10px] text-gray-400">{item.time}</p>
+                      <li key={item.id}>
+                        <button
+                          onClick={() => {
+                            if (item.target && item.target !== '—') {
+                              setNotifOpen(false)
+                              navigate(`/admin?caso=${encodeURIComponent(item.target)}`)
+                            } else {
+                              setNotifOpen(false)
+                            }
+                          }}
+                          className="w-full text-left px-4 py-2.5 border-b border-gray-50 hover:bg-gray-50 transition-colors cursor-pointer"
+                        >
+                          <p className="text-xs font-semibold text-gray-800 capitalize">{item.action}</p>
+                          <p className="text-[11px] text-gray-500 truncate">{item.target !== '—' ? `Caso ${item.target}` : (item.target || item.actor)}</p>
+                          <p className="text-[10px] text-gray-400">{item.time}</p>
+                        </button>
                       </li>
                     ))}
                   </ul>
@@ -203,7 +225,7 @@ export default function AdminDashboard({ onLogout, adminName, cases, spaces, tec
         {/* Content */}
         <div className="flex-1 p-4 lg:p-6 overflow-auto">
           {section === 'dashboard' && <DashboardSection metrics={metrics} cases={cases} onNavigate={s => setSection(s)} />}
-          {section === 'cases' && <CasesSection cases={cases} technicians={technicians} onAssignCase={onAssignCase} onReassignCase={onReassignCase} tecnicoFilter={tecnicoFiltro} onTecnicoFilterChange={setTecnicoFiltro} />}
+          {section === 'cases' && <CasesSection cases={cases} technicians={technicians} onAssignCase={onAssignCase} onReassignCase={onReassignCase} tecnicoFilter={tecnicoFiltro} onTecnicoFilterChange={setTecnicoFiltro} casoInicial={casoInicial} />}
           {section === 'spaces' && <SpacesSection spaces={spaces} cases={cases} onCreateSpace={onCreateSpace} onUpdateSpace={onUpdateSpace} onToggleSpace={onToggleSpace} />}
           {section === 'technicians' && <TechniciansSection technicians={technicians} cases={cases} roles={roles} onInvitar={onInvitar} onEditarTecnico={onEditarTecnico} onVerCasos={(id) => { setTecnicoFiltro(id); setSection('cases') }} />}
           {section === 'categories' && <CategoriesSection categories={categories} onCrear={onCrearCategoria} onEditar={onEditarCategoria} onEliminar={onEliminarCategoria} />}
@@ -445,7 +467,7 @@ function DashboardSection({ metrics, cases, onNavigate }: { metrics: Record<stri
 /* ══════════════════════════════════════════
    CASES
 ══════════════════════════════════════════ */
-function CasesSection({ cases, technicians, onAssignCase, onReassignCase, tecnicoFilter, onTecnicoFilterChange }: { cases: Case[]; technicians: Technician[]; onAssignCase: Props['onAssignCase']; onReassignCase: Props['onReassignCase']; tecnicoFilter: string | null; onTecnicoFilterChange: (id: string | null) => void }) {
+function CasesSection({ cases, technicians, onAssignCase, onReassignCase, tecnicoFilter, onTecnicoFilterChange, casoInicial }: { cases: Case[]; technicians: Technician[]; onAssignCase: Props['onAssignCase']; onReassignCase: Props['onReassignCase']; tecnicoFilter: string | null; onTecnicoFilterChange: (id: string | null) => void; casoInicial?: string | null }) {
   const [search, setSearch] = useState('')
   const [statusFilter, setStatusFilter] = useState('Todos')
   const [priorityFilter, setPriorityFilter] = useState('Todas')
@@ -462,6 +484,18 @@ function CasesSection({ cases, technicians, onAssignCase, onReassignCase, tecnic
       setVerCaso((actual) => (actual?.id === c.id ? ((completo || c) as Case) : actual))
     }).catch(() => { /* se conserva la vista resumida */ })
   }
+
+  // Deep link desde notificacion: abre el modal del caso indicado una sola vez
+  // por valor de ?caso=, cuando el listado ya lo tiene cargado.
+  const casoInicialAbierto = useRef<string | null>(null)
+  useEffect(() => {
+    if (!casoInicial || casoInicialAbierto.current === casoInicial) return
+    const caso = cases.find((c) => c.number.toLowerCase() === casoInicial.toLowerCase())
+    if (caso) {
+      casoInicialAbierto.current = casoInicial
+      abrirDetalle(caso)
+    }
+  }, [casoInicial, cases])
 
   const filtered = cases.filter(c => {
     const q = search.toLowerCase()
