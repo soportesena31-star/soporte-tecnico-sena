@@ -38,13 +38,17 @@ self.addEventListener('push', (event) => {
   }
 
   event.waitUntil((async () => {
-    await self.registration.showNotification(title, options)
-    // Badge del icono de la app: el backend envia en el push cuantos casos
-    // pendientes tiene este usuario (0 para limpiar).
+    // Badge y notificacion en paralelo: el contador se aplica al icono en el
+    // mismo instante en que llega el push (aunque la notificacion tarde o
+    // falle, el badge ya quedo puesto).
+    const tareas: Array<Promise<unknown>> = [
+      self.registration.showNotification(title, options).catch(() => {}),
+    ]
     const pendientes = Number(data.pendientes)
     if (Number.isFinite(pendientes) && 'setAppBadge' in self.registration) {
-      try { await self.registration.setAppBadge(pendientes) } catch { /* sin soporte */ }
+      tareas.push(self.registration.setAppBadge(pendientes).catch(() => {}))
     }
+    await Promise.all(tareas)
   })())
 })
 
