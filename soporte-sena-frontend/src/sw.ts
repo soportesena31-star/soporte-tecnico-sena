@@ -4,6 +4,18 @@ import { NavigationRoute, registerRoute } from 'workbox-routing'
 
 declare let self: ServiceWorkerGlobalScope
 
+// Badge API: TS solo la declara en Navigator, pero en el worker vive en
+// ServiceWorkerRegistration (vite-env.d.ts). Este type guard comprueba que el
+// navegador realmente la soporte y le da el tipo correcto al registro.
+interface RegistroConBadge extends ServiceWorkerRegistration {
+  setAppBadge: (conteo: number) => Promise<void>
+  clearAppBadge: () => Promise<void>
+}
+
+function puedeAplicarBadge(registro: ServiceWorkerRegistration): registro is RegistroConBadge {
+  return 'setAppBadge' in registro
+}
+
 // Precache de los archivos del build (lo mismo que hacia generateSW).
 precacheAndRoute(self.__WB_MANIFEST)
 
@@ -41,12 +53,15 @@ self.addEventListener('push', (event) => {
     // Badge y notificacion en paralelo: el contador se aplica al icono en el
     // mismo instante en que llega el push (aunque la notificacion tarde o
     // falle, el badge ya quedo puesto).
+    // 'registro' es una const local: sobre 'self' (let global) TS no estrecha
+    // tipos, asi que el chequeo 'in' no funcionaria.
+    const registro = self.registration
     const tareas: Array<Promise<unknown>> = [
-      self.registration.showNotification(title, options).catch(() => {}),
+      registro.showNotification(title, options).catch(() => {}),
     ]
     const pendientes = Number(data.pendientes)
-    if (Number.isFinite(pendientes) && 'setAppBadge' in self.registration) {
-      tareas.push(self.registration.setAppBadge(pendientes).catch(() => {}))
+    if (Number.isFinite(pendientes) && puedeAplicarBadge(registro)) {
+      tareas.push(registro.setAppBadge(pendientes).catch(() => {}))
     }
     await Promise.all(tareas)
   })())
@@ -64,8 +79,9 @@ self.addEventListener('message', (event) => {
 // Al tocar la notificacion: abre la app (y enfoca la pestana si ya existe).
 self.addEventListener('notificationclick', (event) => {
   event.notification.close()
-  if ('clearAppBadge' in self.registration) {
-    self.registration.clearAppBadge().catch(() => {})
+  const registro = self.registration
+  if (puedeAplicarBadge(registro)) {
+    registro.clearAppBadge().catch(() => {})
   }
   const url = new URL('/', self.location.origin).toString()
   event.waitUntil(

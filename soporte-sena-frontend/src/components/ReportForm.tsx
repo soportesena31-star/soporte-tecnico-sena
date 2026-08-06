@@ -1,4 +1,4 @@
-import { useState, useRef } from 'react'
+import { useState } from 'react'
 import { MapPin, User, AlertCircle, FileText, Send, ChevronDown, Search, X } from 'lucide-react'
 import PhotoPicker, { type PhotoItem } from './PhotoPicker'
 

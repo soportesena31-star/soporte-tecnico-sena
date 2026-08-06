@@ -6,8 +6,7 @@ import {
   TrendingUp, Clock, CheckCircle, AlertCircle, RotateCcw, Search, Filter,
   ChevronDown, ChevronUp, Edit2, Download, LogOut, Menu,
   Plus, X, Bell, Shield, QrCode, Trash2, Save, Eye, EyeOff,
-  ArrowUpRight, ArrowDownRight, Minus, AlertTriangle, UserPlus, Mail, RefreshCw
-} from 'lucide-react'
+  AlertTriangle, UserPlus, Mail, RefreshCw} from 'lucide-react'
 import {
   BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer,
   PieChart, Pie, Cell, Legend, AreaChart, Area
@@ -889,7 +888,7 @@ function AssignSelect({ caso, technicians, onAssign }: {
 /* ══════════════════════════════════════════
    SPACES
 ══════════════════════════════════════════ */
-function SpacesSection({ spaces, cases, onCreateSpace, onUpdateSpace, onToggleSpace }: { spaces: Space[]; cases: Case[]; onCreateSpace: Props['onCreateSpace']; onUpdateSpace: Props['onUpdateSpace']; onToggleSpace: Props['onToggleSpace'] }) {
+function SpacesSection({ spaces, cases, onCreateSpace, onUpdateSpace }: { spaces: Space[]; cases: Case[]; onCreateSpace: Props['onCreateSpace']; onUpdateSpace: Props['onUpdateSpace']; onToggleSpace: Props['onToggleSpace'] }) {
   const [search, setSearch] = useState('')
   const [typeFilter, setTypeFilter] = useState('Todos')
   const [showModal, setShowModal] = useState(false)
@@ -1465,10 +1464,10 @@ function ReportsSection({ technicians, categories }: { technicians: Technician[]
 
   const reportCases = useMemo(() => {
     if (!report?.casos) return []
-    return report.casos.map(mapCaso).filter((c) => c !== null)
+    return report.casos.map(mapCaso).filter((c): c is Case => c !== null)
   }, [report])
 
-  const applyQuickRange = (range) => {
+  const applyQuickRange = (range: string) => {
     const today = new Date()
     const from = new Date(today)
     if (range === '15 días') {
@@ -1482,7 +1481,7 @@ function ReportsSection({ technicians, categories }: { technicians: Technician[]
     setDateTo(today.toISOString().slice(0, 10))
   }
 
-  const mapStatusFilter = (status) => {
+  const mapStatusFilter = (status: string) => {
     if (statusFilter === 'Todos') return true
     if (statusFilter === 'En proceso') return ['Asignado', 'En proceso'].includes(status)
     return status === statusFilter
@@ -1497,14 +1496,14 @@ function ReportsSection({ technicians, categories }: { technicians: Technician[]
     })
   }, [reportCases, techFilter, catFilter, statusFilter])
 
-  const dateKey = (value) => {
+  const dateKey = (value: string) => {
     if (!value) return null
     const date = new Date(value)
     if (Number.isNaN(date.getTime())) return null
     return date.toISOString().slice(0, 10)
   }
 
-  const buildDateRange = (from, to) => {
+  const buildDateRange = (from: string, to: string) => {
     const start = new Date(`${from}T00:00:00`)
     const end = new Date(`${to}T23:59:59`)
     const days = []
@@ -1613,9 +1612,9 @@ function ReportsSection({ technicians, categories }: { technicians: Technician[]
     }
   }, [dateFrom, dateTo])
 
-  const [downloading, setDownloading] = useState(null)
+  const [downloading, setDownloading] = useState<string | null>(null)
 
-  const descargar = async (formato) => {
+  const descargar = async (formato: string) => {
     if (downloading) return
     setDownloading(formato)
     setReportError('')

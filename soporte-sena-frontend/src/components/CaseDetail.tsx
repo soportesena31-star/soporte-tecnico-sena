@@ -1,4 +1,4 @@
-import { useState, useRef } from 'react'
+import { useState } from 'react'
 import { ChevronLeft, MapPin, Tag, User, Camera, CheckCircle2, AlertTriangle, X, Clock, FileText, UserCheck, ArrowRight, Eye, RefreshCw } from 'lucide-react'
 import { type Case, PRIORITY_COLORS, formatDate } from '../data/mockData'
 import PhotoPicker, { type PhotoItem } from './PhotoPicker'
