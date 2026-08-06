@@ -1,11 +1,19 @@
 const multer = require('multer');
 const path = require('path');
 const fs = require('fs');
+const sharp = require('sharp');
 
 const uploadDir = path.join(__dirname, '..', '..', 'uploads');
 if (!fs.existsSync(uploadDir)) {
   fs.mkdirSync(uploadDir, { recursive: true });
 }
+
+// Perfil de optimizacion configurable por variables de entorno.
+// IMAGEN_MAX_DIMENSION: lado maximo (px). IMAGEN_CALIDAD: 1-100. IMAGEN_FORMATO: webp|jpeg.
+const MAX_DIMENSION = parseInt(process.env.IMAGEN_MAX_DIMENSION || '1600', 10);
+const CALIDAD_IMAGEN = parseInt(process.env.IMAGEN_CALIDAD || '80', 10);
+const FORMATO_IMAGEN = (process.env.IMAGEN_FORMATO || 'webp').toLowerCase() === 'jpeg' ? 'jpeg' : 'webp';
+const EXT_FORMATO = FORMATO_IMAGEN === 'jpeg' ? 'jpg' : 'webp';
 
 // Firmas (magic bytes) de los formatos de imagen admitidos. Se verifica el
 // contenido real del archivo y no solo el Content-Type, que el cliente puede
@@ -28,10 +36,10 @@ function esImagenValida(buffer) {
   // PNG: 89 50 4E 47 0D 0A 1A 0A
   if (coincide(buffer, PNG_FIRMA)) return true;
 
-  // GIF: "GIF87a" o "GIF89a"
+  // GIF: "GIF87a" o "GIF89a" (los bytes 4-5 son '87' o '9a')
   if (coincide(buffer, [0x47, 0x49, 0x46, 0x38])) {
     const version = buffer.toString('latin1', 4, 6);
-    if (version === '87' || version === '89') return true;
+    if (version === '87' || version === '9a') return true;
   }
 
   // WebP: "RIFF" .... "WEBP"
@@ -49,6 +57,23 @@ function esImagenValida(buffer) {
   return false;
 }
 
+// Optimiza la imagen: aplica orientacion EXIF, la reduce al perfil configurado y
+// la re-comprime. Devuelve null si la optimizacion falla o no conviene.
+async function optimizarImagen(buffer, originalname) {
+  const ext = path.extname(originalname).toLowerCase();
+  if (ext === '.gif') return null; // conserva animaciones
+  try {
+    const optimizada = await sharp(buffer)
+      .rotate()
+      .resize({ width: MAX_DIMENSION, height: MAX_DIMENSION, fit: 'inside', withoutEnlargement: true })
+      .toFormat(FORMATO_IMAGEN, { quality: CALIDAD_IMAGEN })
+      .toBuffer();
+    return optimizada.length < buffer.length ? optimizada : null;
+  } catch (err) {
+    return null;
+  }
+}
+
 // Almacenamiento custom: valida el contenido antes de escribir en disco. La API
 // de multer no cambia, asi que los controladores y rutas siguen igual.
 const storage = {
@@ -56,7 +81,7 @@ const storage = {
     const chunks = [];
     file.stream.on('data', (chunk) => chunks.push(chunk));
     file.stream.on('error', (err) => cb(err));
-    file.stream.on('end', () => {
+    file.stream.on('end', async () => {
       const buffer = Buffer.concat(chunks);
       if (buffer.length === 0) {
         return cb(new Error('El archivo esta vacio'));
@@ -64,11 +89,13 @@ const storage = {
       if (!esImagenValida(buffer)) {
         return cb(new Error('El archivo no es una imagen valida'));
       }
-      const filename = `${Date.now()}-${Math.round(Math.random() * 1e9)}${path.extname(file.originalname)}`;
+      const optimizada = await optimizarImagen(buffer, file.originalname);
+      const contenido = optimizada || buffer;
+      const filename = `${Date.now()}-${Math.round(Math.random() * 1e9)}${optimizada ? `.${EXT_FORMATO}` : path.extname(file.originalname)}`;
       const ruta = path.join(uploadDir, filename);
-      fs.writeFile(ruta, buffer, (err) => {
+      fs.writeFile(ruta, contenido, (err) => {
         if (err) return cb(err);
-        cb(null, { destination: uploadDir, filename, path: ruta, size: buffer.length });
+        cb(null, { destination: uploadDir, filename, path: ruta, size: contenido.length });
       });
     });
   },
