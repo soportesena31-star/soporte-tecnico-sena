@@ -33,7 +33,28 @@ export function useVersionCheck() {
       })
     })
 
-    return () => navigator.serviceWorker.removeEventListener('controllerchange', onControllerChange)
+    // Comprobaciones extra de actualizacion: el navegador solo revisa sw.js
+    // al NAVEGAR, asi que si la app queda abierta (aunque sea en segundo
+    // plano) el banner de nueva version no aparece hasta recargar. Se fuerza
+    // reg.update() al volver a la app (visibilitychange) y cada minuto.
+    let ultimaRevision = 0
+    const revisar = () => {
+      const ahora = Date.now()
+      if (ahora - ultimaRevision < 30_000) return
+      ultimaRevision = ahora
+      registroRef.current?.update().catch(() => {})
+    }
+    const onVisibility = () => {
+      if (document.visibilityState === 'visible') revisar()
+    }
+    document.addEventListener('visibilitychange', onVisibility)
+    const intervalo = window.setInterval(revisar, 60_000)
+
+    return () => {
+      document.removeEventListener('visibilitychange', onVisibility)
+      window.clearInterval(intervalo)
+      navigator.serviceWorker.removeEventListener('controllerchange', onControllerChange)
+    }
   }, [])
 
   function aplicarActualizacion() {
