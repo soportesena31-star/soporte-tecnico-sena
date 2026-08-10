@@ -1,4 +1,4 @@
-import { useEffect, useState, useCallback } from 'react'
+import { useEffect, useState, useCallback, useRef } from 'react'
 import { useNavigate, useParams } from 'react-router-dom'
 import CaseDetail from '../components/CaseDetail'
 import { api } from '../api/client'
@@ -15,8 +15,14 @@ export default function CasoDetallePage() {
   const [cargando, setCargando] = useState(true)
   const [errorCarga, setErrorCarga] = useState('')
 
+  // Evita que una carga vieja pise a una mas reciente cuando varias se
+  // superponen (evento SSE + accion propia): solo aplica el estado la
+  // invocacion que fue la ultima en iniciarse; el resto se descarta.
+  const cargaSeq = useRef(0)
   const recargar = useCallback(async () => {
+    const seq = ++cargaSeq.current
     const data = await api.casos.consultar(numeroCaso)
+    if (seq !== cargaSeq.current) return
     const mapeado = mapCaso(data)
     setCaso(mapeado)
     return mapeado

@@ -3,7 +3,7 @@
 -- https://www.phpmyadmin.net/
 --
 -- Servidor: 127.0.0.1
--- Tiempo de generación: 31-07-2026 a las 21:37:27
+-- Tiempo de generación: 07-08-2026 a las 00:40:13
 -- Versión del servidor: 10.4.32-MariaDB
 -- Versión de PHP: 8.2.12
 
@@ -54,9 +54,13 @@ CREATE TABLE `casos` (
 --
 
 INSERT INTO `casos` (`id`, `numero_caso`, `espacio_id`, `ubicacion_personalizada`, `categoria_id`, `reportado_por`, `descripcion`, `foto_novedad`, `estado`, `prioridad`, `tecnico_id`, `foto_evidencia`, `notas_resolucion`, `fecha_asignacion`, `fecha_resolucion`, `fecha_cierre`, `veces_reabierto`, `created_at`, `updated_at`) VALUES
-(1, 'CASO-2026-0001', 1, NULL, 5, 'martina mendez', 'no hay sonido en el auditorio C', NULL, 'resuelto', 'media', 2, '1785515622167-588071043.jfif', '', '2026-07-31 16:29:46', '2026-07-31 16:33:42', NULL, 0, '2026-07-31 16:28:12', '2026-07-31 16:33:42'),
-(2, 'CASO-2026-0002', NULL, 'pasillo 3n piso', 7, 'juan perez', 'televisor pasillo', '[\"1785524219309-276712347.jfif\"]', 'resuelto', 'baja', 2, '[\"1785525349255-614113946.jfif\"]', 'gdfgdegfr', '2026-07-31 18:58:29', '2026-07-31 19:15:49', NULL, 0, '2026-07-31 18:56:59', '2026-07-31 19:15:49'),
-(3, 'CASO-2026-0003', 1, NULL, 2, 'martha mora', 'no tengo internet', '[\"1785525541845-340467972.jfif\"]', 'abierto', 'alta', NULL, NULL, NULL, NULL, NULL, NULL, 0, '2026-07-31 19:19:01', '2026-07-31 19:19:01');
+(1, 'CASO-2026-0001', 1, NULL, 5, 'martina mendez', 'no hay sonido en el auditorio C', '[\"1.jfif\"]', 'resuelto', 'media', 2, '[\"2.jfif\"]', '', '2026-07-31 16:29:46', '2026-07-31 16:33:42', NULL, 0, '2026-07-31 16:28:12', '2026-08-03 20:52:19'),
+(2, 'CASO-2026-0002', NULL, 'pasillo 3n piso', 7, 'juan perez', 'televisor pasillo', '[\"2.jfif\"]', 'resuelto', 'baja', 2, '[\"3.jfif\"]', 'gdfgdegfr', '2026-07-31 18:58:29', '2026-07-31 19:15:49', NULL, 0, '2026-07-31 18:56:59', '2026-08-03 20:52:20'),
+(3, 'CASO-2026-0003', 1, NULL, 2, 'martha mora', 'no tengo internet', '[\"3.jfif\"]', 'resuelto', 'alta', 2, '[\"1785793830346-267370071.jpg\"]', 'Equipo conectado a la red', '2026-08-03 15:34:55', '2026-08-03 21:50:30', NULL, 0, '2026-07-31 19:19:01', '2026-08-03 21:50:30'),
+(4, 'CASO-2026-0004', 2, NULL, 5, 'Daniel garcia', 'poner un tv en la cancha de futbol', '[\"1.jfif\",\"2.jfif\"]', 'en_proceso', 'media', 2, '[\"3.jfif\"]', NULL, '2026-08-03 16:11:12', NULL, NULL, 0, '2026-08-03 16:09:23', '2026-08-03 21:52:55'),
+(5, 'CASO-2026-0005', 2, NULL, 1, 'Tester', 'Test case multi foto', '[\"2.jfif\",\"3.jfif\"]', 'resuelto', 'alta', 2, '[\"1785795488114-52364037.jpg\"]', 'Equipo conectado a la red', '2026-08-03 22:16:16', '2026-08-03 22:18:08', NULL, 0, '2026-08-03 16:39:21', '2026-08-03 22:18:08'),
+(6, 'CASO-2026-0006', 2, NULL, 1, 'Tester', 'Test case with 3 fotos', '[\"1.jfif\",\"2.jfif\",\"3.jfif\"]', 'resuelto', 'alta', 3, '[\"1785793829569-161441950.png\"]', 'prueba con campo notas_resolucion final', '2026-08-03 19:40:57', '2026-08-03 21:50:29', NULL, 0, '2026-08-03 16:45:55', '2026-08-03 21:50:29'),
+(7, 'CASO-2026-0007', NULL, 'Prueba automatica', 5, 'Prueba Local IA', 'Caso de prueba creado por el flujo de verificacion del deep-link push.', NULL, 'abierto', 'media', NULL, NULL, NULL, NULL, NULL, NULL, 0, '2026-08-06 17:43:46', '2026-08-06 17:43:46');
 
 -- --------------------------------------------------------
 
@@ -84,6 +88,29 @@ INSERT INTO `categorias` (`id`, `nombre`, `prioridad_sugerida`, `created_at`, `u
 (5, 'Audiovisuales', 'media', '2026-07-31 12:19:57', '2026-07-31 12:19:57'),
 (6, 'Climatización', 'media', '2026-07-31 12:19:57', '2026-07-31 12:19:57'),
 (7, 'Otro', 'baja', '2026-07-31 12:19:57', '2026-07-31 12:19:57');
+
+-- --------------------------------------------------------
+
+--
+-- Estructura de tabla para la tabla `configuracion`
+--
+
+CREATE TABLE `configuracion` (
+  `id` tinyint(4) NOT NULL,
+  `notificar_nuevo_caso` tinyint(1) NOT NULL DEFAULT 1,
+  `notificar_asignacion` tinyint(1) NOT NULL DEFAULT 1,
+  `notificar_resolucion` tinyint(1) NOT NULL DEFAULT 0,
+  `notificar_email` tinyint(1) NOT NULL DEFAULT 1,
+  `asignacion_automatica` tinyint(1) NOT NULL DEFAULT 0,
+  `updated_at` timestamp NOT NULL DEFAULT current_timestamp() ON UPDATE current_timestamp()
+) ;
+
+--
+-- Volcado de datos para la tabla `configuracion`
+--
+
+INSERT INTO `configuracion` (`id`, `notificar_nuevo_caso`, `notificar_asignacion`, `notificar_resolucion`, `notificar_email`, `asignacion_automatica`, `updated_at`) VALUES
+(1, 1, 1, 0, 0, 0, '2026-08-03 20:38:41');
 
 -- --------------------------------------------------------
 
@@ -140,7 +167,39 @@ INSERT INTO `historial_casos` (`id`, `caso_id`, `accion`, `usuario_id`, `detalle
 (8, 2, 'en_proceso', 2, 'Trabajo iniciado por migue perez', '2026-07-31 18:58:33'),
 (9, 2, 'nota', 2, 'ljhcdwejcbfidbg', '2026-07-31 18:59:25'),
 (10, 2, 'resuelto', 2, 'gdfgdegfr', '2026-07-31 19:15:49'),
-(11, 3, 'creado', NULL, 'Reportado por martha mora', '2026-07-31 19:19:01');
+(11, 3, 'creado', NULL, 'Reportado por martha mora', '2026-07-31 19:19:01'),
+(12, 3, 'asignado', 1, 'Asignado manualmente por el administrador a migue perez', '2026-08-03 15:03:02'),
+(13, 3, 'asignado', 1, 'Asignado manualmente por el administrador a migue perez', '2026-08-03 15:34:55'),
+(14, 4, 'creado', NULL, 'Reportado por Daniel garcia', '2026-08-03 16:09:23'),
+(15, 4, 'asignado', 1, 'Asignado manualmente por el administrador a migue perez', '2026-08-03 16:11:12'),
+(16, 5, 'creado', NULL, 'Reportado por Tester', '2026-08-03 16:39:21'),
+(17, 6, 'creado', NULL, 'Reportado por Tester', '2026-08-03 16:45:55'),
+(18, 6, 'asignado', 3, NULL, '2026-08-03 19:40:57'),
+(19, 3, 'en_proceso', 2, NULL, '2026-08-03 21:42:04'),
+(20, 3, 'nota', 2, 'Equipo conectado a la red', '2026-08-03 21:47:05'),
+(21, 6, 'resuelto', 1, 'prueba con campo notas_resolucion final', '2026-08-03 21:50:29'),
+(22, 3, 'resuelto', 2, 'Equipo conectado a la red', '2026-08-03 21:50:30'),
+(23, 4, 'en_proceso', 2, NULL, '2026-08-03 21:52:55'),
+(24, 5, 'asignado', 2, NULL, '2026-08-03 22:16:16'),
+(25, 5, 'en_proceso', 2, NULL, '2026-08-03 22:16:22'),
+(26, 5, 'resuelto', 2, 'Equipo conectado a la red', '2026-08-03 22:18:08'),
+(27, 7, 'creado', NULL, 'Reportado por Prueba Local IA', '2026-08-06 17:43:46');
+
+-- --------------------------------------------------------
+
+--
+-- Estructura de tabla para la tabla `push_suscripciones`
+--
+
+CREATE TABLE `push_suscripciones` (
+  `id` int(11) NOT NULL,
+  `usuario_id` int(10) UNSIGNED NOT NULL,
+  `endpoint` varchar(500) NOT NULL,
+  `p256dh` varchar(255) NOT NULL,
+  `auth` varchar(255) NOT NULL,
+  `user_agent` varchar(255) DEFAULT NULL,
+  `created_at` datetime NOT NULL
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
 
 -- --------------------------------------------------------
 
@@ -194,39 +253,6 @@ INSERT INTO `tokens_acceso` (`id`, `tipo`, `email`, `token_hash`, `usuario_id`, 
 -- --------------------------------------------------------
 
 --
--- Estructura de tabla para la tabla `push_suscripciones`
---
-
-CREATE TABLE `push_suscripciones` (
-  `id` int(10) UNSIGNED NOT NULL,
-  `usuario_id` int(10) UNSIGNED NOT NULL COMMENT 'Dispositivo suscrito: quien recibe la alerta',
-  `endpoint` varchar(500) NOT NULL,
-  `p256dh` varchar(255) NOT NULL,
-  `auth` varchar(255) NOT NULL,
-  `user_agent` varchar(255) DEFAULT NULL,
-  `created_at` timestamp NOT NULL DEFAULT current_timestamp()
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci COMMENT='Suscripciones Web Push para alertas de casos nuevos';
-
---
--- Índices para la tabla `push_suscripciones`
---
-ALTER TABLE `push_suscripciones`
-  ADD PRIMARY KEY (`id`),
-  ADD UNIQUE KEY `uq_push_endpoint` (`endpoint`),
-  ADD KEY `idx_push_usuario` (`usuario_id`);
-
---
--- FKs para la tabla `push_suscripciones`
---
-ALTER TABLE `push_suscripciones`
-  ADD CONSTRAINT `fk_push_usuario` FOREIGN KEY (`usuario_id`) REFERENCES `usuarios` (`id`) ON DELETE CASCADE ON UPDATE CASCADE;
-
-ALTER TABLE `push_suscripciones`
-  MODIFY `id` int(10) UNSIGNED NOT NULL AUTO_INCREMENT;
-
--- --------------------------------------------------------
-
---
 -- Estructura de tabla para la tabla `usuarios`
 --
 
@@ -247,8 +273,10 @@ CREATE TABLE `usuarios` (
 --
 
 INSERT INTO `usuarios` (`id`, `nombre`, `email`, `password_hash`, `rol_id`, `especialidad`, `activo`, `created_at`, `updated_at`) VALUES
-(1, 'Administrador', 'admin@sena.edu.co', '$2a$10$JIcYIcunxvXAMRtENxfGL.Hf4DbG5kZDREVJd46bDNHXt6WD8rZAe', 2, NULL, 1, '2026-07-31 12:34:13', '2026-07-31 12:34:13'),
-(2, 'migue perez', 'soportesena31@gmail.com', '$2a$10$hXqJE.nqHQh14sh.vVc71.lS3g1G715bWbKYmwaYrH9/nJiR5Xz5y', 1, NULL, 1, '2026-07-31 14:03:16', '2026-07-31 14:03:16');
+(1, 'Administrador', 'admin@sena.edu.co', '$2a$10$rwfDLIgyWMikNVFfSrlVAO6wEhhJ2tWQRWIFD5pG2XnhRj.orreoG', 2, NULL, 1, '2026-07-31 12:34:13', '2026-08-03 20:32:08'),
+(2, 'miguel perez', 'soportesena31@gmail.com', '$2a$10$hXqJE.nqHQh14sh.vVc71.lS3g1G715bWbKYmwaYrH9/nJiR5Xz5y', 1, NULL, 1, '2026-07-31 14:03:16', '2026-08-03 19:47:46'),
+(3, 'Tecnico Uno', 'tecnico1@sena.edu.co', '$2a$10$JDvPjImPlZIYTImgbj6HMOHxOoE8Ag1/K.9aTgFxk4GYtwCOTrY6y', 1, 'Redes y conectividad', 1, '2026-08-03 19:38:58', '2026-08-03 19:38:58'),
+(4, 'Tecnico Dos', 'tecnico2@sena.edu.co', '$2a$10$Q6ApJETouS3k/R6XC/tPg.l047HhvazDH08MisazTwWhBnJ2WGfzO', 1, 'Equipos de computo', 1, '2026-08-03 19:38:58', '2026-08-03 19:51:41');
 
 -- --------------------------------------------------------
 
@@ -340,6 +368,12 @@ ALTER TABLE `categorias`
   ADD UNIQUE KEY `uq_categorias_nombre` (`nombre`);
 
 --
+-- Indices de la tabla `configuracion`
+--
+ALTER TABLE `configuracion`
+  ADD PRIMARY KEY (`id`);
+
+--
 -- Indices de la tabla `espacios`
 --
 ALTER TABLE `espacios`
@@ -356,6 +390,14 @@ ALTER TABLE `historial_casos`
   ADD KEY `idx_historial_caso` (`caso_id`),
   ADD KEY `idx_historial_usuario` (`usuario_id`),
   ADD KEY `idx_historial_created_at` (`created_at`);
+
+--
+-- Indices de la tabla `push_suscripciones`
+--
+ALTER TABLE `push_suscripciones`
+  ADD PRIMARY KEY (`id`),
+  ADD UNIQUE KEY `push_suscripciones_endpoint` (`endpoint`),
+  ADD KEY `usuario_id` (`usuario_id`);
 
 --
 -- Indices de la tabla `roles`
@@ -397,7 +439,7 @@ ALTER TABLE `casos`
 -- AUTO_INCREMENT de la tabla `categorias`
 --
 ALTER TABLE `categorias`
-  MODIFY `id` int(10) UNSIGNED NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=8;
+  MODIFY `id` int(10) UNSIGNED NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=9;
 
 --
 -- AUTO_INCREMENT de la tabla `espacios`
@@ -409,7 +451,13 @@ ALTER TABLE `espacios`
 -- AUTO_INCREMENT de la tabla `historial_casos`
 --
 ALTER TABLE `historial_casos`
-  MODIFY `id` int(10) UNSIGNED NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=12;
+  MODIFY `id` int(10) UNSIGNED NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=28;
+
+--
+-- AUTO_INCREMENT de la tabla `push_suscripciones`
+--
+ALTER TABLE `push_suscripciones`
+  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT;
 
 --
 -- AUTO_INCREMENT de la tabla `roles`
@@ -427,7 +475,7 @@ ALTER TABLE `tokens_acceso`
 -- AUTO_INCREMENT de la tabla `usuarios`
 --
 ALTER TABLE `usuarios`
-  MODIFY `id` int(10) UNSIGNED NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=3;
+  MODIFY `id` int(10) UNSIGNED NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=5;
 
 --
 -- Restricciones para tablas volcadas
@@ -446,6 +494,12 @@ ALTER TABLE `casos`
 ALTER TABLE `historial_casos`
   ADD CONSTRAINT `fk_historial_caso` FOREIGN KEY (`caso_id`) REFERENCES `casos` (`id`) ON DELETE CASCADE ON UPDATE CASCADE,
   ADD CONSTRAINT `fk_historial_usuario` FOREIGN KEY (`usuario_id`) REFERENCES `usuarios` (`id`) ON DELETE SET NULL ON UPDATE CASCADE;
+
+--
+-- Filtros para la tabla `push_suscripciones`
+--
+ALTER TABLE `push_suscripciones`
+  ADD CONSTRAINT `push_suscripciones_ibfk_1` FOREIGN KEY (`usuario_id`) REFERENCES `usuarios` (`id`) ON DELETE CASCADE ON UPDATE CASCADE;
 
 --
 -- Filtros para la tabla `tokens_acceso`

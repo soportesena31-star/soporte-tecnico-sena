@@ -1,4 +1,4 @@
-import { useEffect, useState, useCallback } from 'react'
+import { useEffect, useState, useCallback, useRef } from 'react'
 import { useNavigate } from 'react-router-dom'
 import TechnicianDashboard from '../components/TechnicianDashboard'
 import { api } from '../api/client'
@@ -14,8 +14,14 @@ export default function TecnicoPage() {
   const [cargando, setCargando] = useState(true)
   const [errorCarga, setErrorCarga] = useState('')
 
+  // Evita que una carga vieja pise a una mas reciente cuando varias se
+  // superponen (evento SSE + accion propia): solo aplica el estado la
+  // invocacion que fue la ultima en iniciarse; el resto se descarta.
+  const cargaSeq = useRef(0)
   const cargarCasos = useCallback(async () => {
+    const seq = ++cargaSeq.current
     const data = await api.casos.listar()
+    if (seq !== cargaSeq.current) return
     setCases(data.map(mapCasoResumen))
   }, [])
 

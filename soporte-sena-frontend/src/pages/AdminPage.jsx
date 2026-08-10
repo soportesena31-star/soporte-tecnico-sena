@@ -30,7 +30,12 @@ export default function AdminPage() {
     }
   }, [casoInicial, setSearchParams])
 
+  // Evita que una carga vieja pise a una mas reciente cuando varias se
+  // superponen (evento SSE + accion propia + badge): solo aplica el estado la
+  // invocacion que fue la ultima en iniciarse; el resto se descarta.
+  const cargaSeq = useRef(0)
   const cargarTodo = useCallback(async () => {
+    const seq = ++cargaSeq.current
     const [casosRes, espaciosRes, usuariosRes, categoriasRes, historialRes, rolesRes] = await Promise.all([
       api.casos.listar(),
       api.espacios.listar(),
@@ -39,6 +44,7 @@ export default function AdminPage() {
       api.historial.listar({ limite: 100 }),
       api.roles.listar(),
     ])
+    if (seq !== cargaSeq.current) return
 
     const cases = casosRes.map(mapCasoResumen)
     const conteoPorCategoria = cases.reduce((acc, c) => {
