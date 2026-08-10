@@ -2,6 +2,15 @@ import { useCallback, useEffect, useRef, useState } from 'react'
 import { useAuth } from '../context/AuthContext'
 import { api, getToken, API_URL } from '../api/client'
 
+// Evento global que avisa a las paginas cuando el backend publica cualquier
+// cambio de casos (nuevo_caso o caso_actualizado) por el stream SSE. Las
+// paginas se suscriben con useCasoActualizado() para recargar sus datos.
+export const EVENTO_CASO_ACTUALIZADO = 'soporte:caso_actualizado'
+
+function difundirCambioDeCaso() {
+  window.dispatchEvent(new Event(EVENTO_CASO_ACTUALIZADO))
+}
+
 // Clave publica VAPID (solo lectura). Se define en Railway como VITE_VAPID_PUBLIC_KEY.
 const VAPID_PUBLIC = import.meta.env.VITE_VAPID_PUBLIC_KEY || ''
 
@@ -150,6 +159,15 @@ export function useAlertas() {
         // La notificacion la muestra el service worker del push (funciona
         // incluso con la app cerrada); aqui solo se suena y vibra en el panel
         // abierto. Crear otra con new Notification duplicaria el aviso.
+        // Ademas se difunde el cambio para que las paginas recarguen sus datos.
+        difundirCambioDeCaso()
+      })
+
+      // Cualquier otra accion sobre un caso (tomar, asignar, iniciar,
+      // resolver, reabrir, nota): se difunde el cambio para que las paginas
+      // recarguen en vivo sin recargar el navegador.
+      es.addEventListener('caso_actualizado', () => {
+        difundirCambioDeCaso()
       })
 
       es.onerror = () => {

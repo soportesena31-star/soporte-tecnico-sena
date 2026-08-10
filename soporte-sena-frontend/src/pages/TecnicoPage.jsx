@@ -5,6 +5,7 @@ import { api } from '../api/client'
 import { mapCasoResumen } from '../api/mappers'
 import { useAuth } from '../context/AuthContext'
 import { usarBadgePendientes } from '../hooks/useAppBadge'
+import { useCasoActualizado } from '../hooks/useCasoActualizado'
 
 export default function TecnicoPage() {
   const navigate = useNavigate()
@@ -23,6 +24,14 @@ export default function TecnicoPage() {
       .catch((err) => setErrorCarga(err.message || 'No se pudieron cargar los casos'))
       .finally(() => setCargando(false))
   }, [cargarCasos])
+
+  // Recarga en vivo cuando el backend publica un cambio (nuevo caso, tomar,
+  // asignar, iniciar, resolver, reabrir, nota). Con esto el badge se
+  // recalcula en el mismo ciclo, sin esperar una recarga manual.
+  const refrescarEnVivo = useCallback(() => {
+    cargarCasos().catch(() => {})
+  }, [cargarCasos])
+  useCasoActualizado(refrescarEnVivo)
 
   // Badge del icono: casos abiertos sin atender (mismo conteo que el admin).
   const pendientes = cargando

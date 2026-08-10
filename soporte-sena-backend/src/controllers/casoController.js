@@ -234,6 +234,13 @@ async function tomarCaso(req, res, next) {
       usuario_id: req.usuario.id,
     });
 
+    // Refresca en vivo los paneles abiertos (antes este cambio era mudo).
+    publicarEvento('caso_actualizado', {
+      numero_caso: caso.numero_caso,
+      caso_id: caso.id,
+      accion: 'tomado',
+    });
+
     return successResponse(res, 200, caso, 'Caso asignado');
   } catch (err) {
     next(err);
@@ -277,6 +284,13 @@ async function asignarCaso(req, res, next) {
         { model: Categoria, as: 'categoria' },
         { model: Usuario, as: 'tecnico', attributes: ['id', 'nombre'] },
       ],
+    });
+
+    // Refresca en vivo los paneles abiertos (antes este cambio era mudo).
+    publicarEvento('caso_actualizado', {
+      numero_caso: casoActualizado.numero_caso,
+      caso_id: casoActualizado.id,
+      accion: 'asignado',
     });
 
     return successResponse(res, 200, casoActualizado, 'Caso asignado');
@@ -403,6 +417,13 @@ async function iniciarCaso(req, res, next) {
       usuario_id: req.usuario.id,
     });
 
+    // Refresca en vivo los paneles abiertos (antes este cambio era mudo).
+    publicarEvento('caso_actualizado', {
+      numero_caso: caso.numero_caso,
+      caso_id: caso.id,
+      accion: 'iniciado',
+    });
+
     return successResponse(res, 200, caso, 'Trabajo iniciado');
   } catch (err) {
     next(err);
@@ -425,6 +446,13 @@ async function agregarNota(req, res, next) {
       accion: 'nota',
       usuario_id: req.usuario.id,
       detalle: nota.trim(),
+    });
+
+    // Refresca en vivo el detalle del caso abierto en otros paneles.
+    publicarEvento('caso_actualizado', {
+      numero_caso: caso.numero_caso,
+      caso_id: caso.id,
+      accion: 'nota',
     });
 
     return successResponse(res, 201, entrada, 'Nota agregada');
@@ -479,6 +507,13 @@ async function resolverCaso(req, res, next) {
       detalle: req.body.notas_resolucion,
     });
 
+    // Refresca en vivo los paneles abiertos (antes este cambio era mudo).
+    publicarEvento('caso_actualizado', {
+      numero_caso: caso.numero_caso,
+      caso_id: caso.id,
+      accion: 'resuelto',
+    });
+
     return successResponse(res, 200, caso, 'Caso resuelto');
   } catch (err) {
     next(err);
@@ -505,6 +540,13 @@ async function reabrirCaso(req, res, next) {
       accion: 'reabierto',
       usuario_id: req.usuario ? req.usuario.id : null,
       detalle: req.body.motivo || null,
+    });
+
+    // Refresca en vivo los paneles abiertos (antes este cambio era mudo).
+    publicarEvento('caso_actualizado', {
+      numero_caso: caso.numero_caso,
+      caso_id: caso.id,
+      accion: 'reabierto',
     });
 
     return successResponse(res, 200, caso, 'Caso reabierto');

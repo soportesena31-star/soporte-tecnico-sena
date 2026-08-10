@@ -4,6 +4,7 @@ import CaseDetail from '../components/CaseDetail'
 import { api } from '../api/client'
 import { mapCaso } from '../api/mappers'
 import { useAuth } from '../context/AuthContext'
+import { useCasoActualizado } from '../hooks/useCasoActualizado'
 
 export default function CasoDetallePage() {
   const navigate = useNavigate()
@@ -31,6 +32,13 @@ export default function CasoDetallePage() {
   useEffect(() => {
     recargar().catch((err) => setErrorCarga(err.message || 'No se pudo cargar el caso')).finally(() => setCargando(false))
   }, [recargar])
+
+  // Si otro usuario cambia este caso mientras la vista esta abierta (tomar,
+  // iniciar, resolver, nota, reasignar), el detalle se refresca solo.
+  const refrescarEnVivo = useCallback(() => {
+    recargar().catch(() => {})
+  }, [recargar])
+  useCasoActualizado(refrescarEnVivo)
 
   if (cargando) {
     return (

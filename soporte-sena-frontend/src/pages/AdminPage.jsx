@@ -7,6 +7,7 @@ import {
 } from '../api/mappers'
 import { useAuth } from '../context/AuthContext'
 import { usarBadgePendientes } from '../hooks/useAppBadge'
+import { useCasoActualizado } from '../hooks/useCasoActualizado'
 
 export default function AdminPage() {
   const navigate = useNavigate()
@@ -63,6 +64,13 @@ export default function AdminPage() {
   useEffect(() => {
     cargarTodo().catch((err) => setErrorCarga(err.message || 'No se pudo cargar el panel')).finally(() => setCargando(false))
   }, [cargarTodo])
+
+  // Recarga en vivo cuando el backend publica un cambio de casos: el panel,
+  // la campana y el badge se actualizan solos, sin recargar la pagina.
+  const refrescarEnVivo = useCallback(() => {
+    cargarTodo().catch(() => {})
+  }, [cargarTodo])
+  useCasoActualizado(refrescarEnVivo)
 
   // Badge del icono: casos abiertos (sin atender) para el administrador.
   const pendientes = cargando || !datos ? null : datos.cases.filter((c) => c.status === 'Abierto').length
