@@ -94,6 +94,9 @@ export default function CasoDetallePage() {
         await api.casos.reasignar(caso.id, tecnicoId, motivo)
         return recargar()
       }}
+      esAdmin={esAdmin}
+      onCerrarCaso={async () => { await api.casos.cerrar(caso.id); return recargar() }}
+      onReabrirCaso={async (motivo) => { await api.casos.reabrir(caso.id, motivo); return recargar() }}
     />
   )
 }

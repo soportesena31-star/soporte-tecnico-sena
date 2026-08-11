@@ -2,7 +2,7 @@ const express = require('express');
 
 const router = express.Router();
 const {
-  crearCaso, consultarPorNumero, listarCasos, tomarCaso, asignarCaso, reasignarCaso, iniciarCaso, agregarNota, resolverCaso, reabrirCaso,
+  crearCaso, consultarPorNumero, listarCasos, tomarCaso, asignarCaso, reasignarCaso, iniciarCaso, agregarNota, resolverCaso, cerrarCaso, reabrirCaso,
 } = require('../controllers/casoController');
 const { crearCasoValidator, resolverCasoValidator, asignarCasoValidator, reasignarCasoValidator } = require('../validators/casoValidators');
 const validate = require('../middleware/validate');
@@ -35,6 +35,9 @@ router.post('/:id/resolver', requireAuth, upload.fields([
   { name: 'foto_evidencia', maxCount: 5 },
   { name: 'fotos_evidencia', maxCount: 5 },
 ]), resolverCasoValidator, validate, resolverCaso);
-router.post('/:id/reabrir', requireAuth, reabrirCaso);
+// Cerrar y reabrir son decisiones administrativas (cierran o reactivan un caso
+// ya resuelto): solo el administrador puede ejecutarlas.
+router.post('/:id/cerrar', requireAuth, requireRol('administrador'), cerrarCaso);
+router.post('/:id/reabrir', requireAuth, requireRol('administrador'), reabrirCaso);
 
 module.exports = router;

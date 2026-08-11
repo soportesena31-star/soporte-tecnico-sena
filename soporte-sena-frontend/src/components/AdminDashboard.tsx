@@ -7,13 +7,15 @@ import {
   TrendingUp, Clock, CheckCircle, AlertCircle, RotateCcw, Search, Filter,
   ChevronDown, ChevronUp, Edit2, Download, LogOut, Menu,
   Plus, X, Bell, Shield, QrCode, Trash2, Save, Eye, EyeOff,
-  AlertTriangle, UserPlus, Mail, RefreshCw} from 'lucide-react'
+  AlertTriangle, UserPlus, Mail, RefreshCw, Lock} from 'lucide-react'
 import {
   BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer,
   PieChart, Pie, Cell, Legend, AreaChart, Area
 } from 'recharts'
 import { STATUS_COLORS, PRIORITY_COLORS, formatDate, type Case, type Space } from '../data/mockData'
 import ReasignarModal from './ReasignarModal'
+import CerrarModal from './CerrarModal'
+import ReabrirModal from './ReabrirModal'
 
 type Section = 'dashboard' | 'cases' | 'spaces' | 'technicians' | 'categories' | 'reports' | 'history' | 'settings'
 
@@ -36,6 +38,9 @@ interface Props {
   onInvitar: (data: { email: string; nombre: string; rol_id: string }) => Promise<{ correo_enviado: boolean; motivo?: string }>
   onAssignCase: (caseId: string, tecnicoId: string) => Promise<void>
   onReassignCase: (caseId: string, tecnicoId: string, motivo: string) => Promise<void>
+  /** Cerrar o reabrir un caso: decisiones administrativas (solo admin). */
+  onCerrarCaso: (caseId: string) => Promise<void>
+  onReabrirCaso: (caseId: string, motivo: string) => Promise<void>
   onEditarTecnico: (id: string, datos: { nombre: string; email: string; especialidad?: string; rol_id: string; activo: boolean }) => Promise<void>
   onCrearCategoria: (datos: { nombre: string; prioridad: string }) => Promise<void>
   onEditarCategoria: (id: string, datos: { nombre: string; prioridad: string }) => Promise<void>
@@ -58,7 +63,7 @@ const NAV = [
 
 const CATEGORY_COLORS = ['#39A900', '#2563EB', '#EF4444', '#8B5CF6', '#F59E0B', '#06B6D4', '#9333EA', '#EA580C']
 
-export default function AdminDashboard({ onLogout, adminName, cases, spaces, technicians, categories, historyLog, roles, onCreateSpace, onUpdateSpace, onToggleSpace, onInvitar, onAssignCase, onReassignCase, onEditarTecnico, onCrearCategoria, onEditarCategoria, onEliminarCategoria, casoInicial }: Props) {
+export default function AdminDashboard({ onLogout, adminName, cases, spaces, technicians, categories, historyLog, roles, onCreateSpace, onUpdateSpace, onToggleSpace, onInvitar, onAssignCase, onReassignCase, onCerrarCaso, onReabrirCaso, onEditarTecnico, onCrearCategoria, onEditarCategoria, onEliminarCategoria, casoInicial }: Props) {
   const navigate = useNavigate()
   const [section, setSection] = useState<Section>('dashboard')
   const [sidebarOpen, setSidebarOpen] = useState(false)
@@ -225,7 +230,7 @@ export default function AdminDashboard({ onLogout, adminName, cases, spaces, tec
         {/* Content */}
         <div className="flex-1 p-4 lg:p-6 overflow-auto">
           {section === 'dashboard' && <DashboardSection metrics={metrics} cases={cases} onNavigate={s => setSection(s)} />}
-          {section === 'cases' && <CasesSection cases={cases} technicians={technicians} onAssignCase={onAssignCase} onReassignCase={onReassignCase} tecnicoFilter={tecnicoFiltro} onTecnicoFilterChange={setTecnicoFiltro} casoInicial={casoInicial} />}
+          {section === 'cases' && <CasesSection cases={cases} technicians={technicians} onAssignCase={onAssignCase} onReassignCase={onReassignCase} onCerrarCaso={onCerrarCaso} onReabrirCaso={onReabrirCaso} tecnicoFilter={tecnicoFiltro} onTecnicoFilterChange={setTecnicoFiltro} casoInicial={casoInicial} />}
           {section === 'spaces' && <SpacesSection spaces={spaces} cases={cases} onCreateSpace={onCreateSpace} onUpdateSpace={onUpdateSpace} onToggleSpace={onToggleSpace} />}
           {section === 'technicians' && <TechniciansSection technicians={technicians} cases={cases} roles={roles} onInvitar={onInvitar} onEditarTecnico={onEditarTecnico} onVerCasos={(id) => { setTecnicoFiltro(id); setSection('cases') }} />}
           {section === 'categories' && <CategoriesSection categories={categories} onCrear={onCrearCategoria} onEditar={onEditarCategoria} onEliminar={onEliminarCategoria} />}
@@ -467,7 +472,7 @@ function DashboardSection({ metrics, cases, onNavigate }: { metrics: Record<stri
 /* ══════════════════════════════════════════
    CASES
 ══════════════════════════════════════════ */
-function CasesSection({ cases, technicians, onAssignCase, onReassignCase, tecnicoFilter, onTecnicoFilterChange, casoInicial }: { cases: Case[]; technicians: Technician[]; onAssignCase: Props['onAssignCase']; onReassignCase: Props['onReassignCase']; tecnicoFilter: string | null; onTecnicoFilterChange: (id: string | null) => void; casoInicial?: string | null }) {
+function CasesSection({ cases, technicians, onAssignCase, onReassignCase, onCerrarCaso, onReabrirCaso, tecnicoFilter, onTecnicoFilterChange, casoInicial }: { cases: Case[]; technicians: Technician[]; onAssignCase: Props['onAssignCase']; onReassignCase: Props['onReassignCase']; onCerrarCaso: Props['onCerrarCaso']; onReabrirCaso: Props['onReabrirCaso']; tecnicoFilter: string | null; onTecnicoFilterChange: (id: string | null) => void; casoInicial?: string | null }) {
   const [search, setSearch] = useState('')
   const [statusFilter, setStatusFilter] = useState('Todos')
   const [priorityFilter, setPriorityFilter] = useState('Todas')
@@ -536,7 +541,7 @@ function CasesSection({ cases, technicians, onAssignCase, onReassignCase, tecnic
           </div>
           <div className="flex gap-2">
             <select value={statusFilter} onChange={e => { setStatusFilter(e.target.value); setPage(1) }} className="px-3 py-2.5 rounded-xl border border-gray-200 text-sm bg-white focus:outline-none focus:ring-2 focus:ring-sena-green/20 focus:border-sena-green">
-              {['Todos', 'Abierto', 'Asignado', 'En proceso', 'Resuelto', 'Cerrado'].map(s => <option key={s}>{s}</option>)}
+              {['Todos', 'Abierto', 'Asignado', 'En proceso', 'Resuelto', 'Cerrado', 'Reabierto'].map(s => <option key={s}>{s}</option>)}
             </select>
             <select value={priorityFilter} onChange={e => { setPriorityFilter(e.target.value); setPage(1) }} className="px-3 py-2.5 rounded-xl border border-gray-200 text-sm bg-white focus:outline-none focus:ring-2 focus:ring-sena-green/20 focus:border-sena-green">
               {['Todas', 'Alta', 'Media', 'Baja'].map(p => <option key={p}>{p}</option>)}
@@ -582,18 +587,34 @@ function CasesSection({ cases, technicians, onAssignCase, onReassignCase, tecnic
         )}
       </div>
 
-      {verCaso && <VerDetalleCasoModal caso={verCaso} technicians={technicians} onReassignCase={onReassignCase} onClose={() => setVerCaso(null)} />}
+      {verCaso && <VerDetalleCasoModal caso={verCaso} technicians={technicians} onReassignCase={onReassignCase} onCerrarCaso={onCerrarCaso} onReabrirCaso={onReabrirCaso} onClose={() => setVerCaso(null)} />}
     </div>
   )
 }
 
-function VerDetalleCasoModal({ caso, technicians, onReassignCase, onClose }: { caso: Case; technicians: Technician[]; onReassignCase: Props['onReassignCase']; onClose: () => void }) {
+function VerDetalleCasoModal({ caso, technicians, onReassignCase, onCerrarCaso, onReabrirCaso, onClose }: { caso: Case; technicians: Technician[]; onReassignCase: Props['onReassignCase']; onCerrarCaso: Props['onCerrarCaso']; onReabrirCaso: Props['onReabrirCaso']; onClose: () => void }) {
   const sc = STATUS_COLORS[caso.status]
   const pc = PRIORITY_COLORS[caso.priority]
   const fotos = caso.photos?.length ? caso.photos : caso.photo ? [caso.photo] : []
   const evidencias = caso.evidences?.length ? caso.evidences : caso.evidence ? [caso.evidence] : []
   const [reassignOpen, setReassignOpen] = useState(false)
+  const [cerrarOpen, setCerrarOpen] = useState(false)
+  const [reabrirOpen, setReabrirOpen] = useState(false)
+  const [actionError, setActionError] = useState('')
   const puedeReasignar = !['Resuelto', 'Cerrado'].includes(caso.status)
+  const esResuelto = caso.status === 'Resuelto'
+  const esCerrable = esResuelto
+  const esReabrible = ['Resuelto', 'Cerrado'].includes(caso.status)
+
+  const ejecutarAccion = async (accion: () => Promise<void>) => {
+    setActionError('')
+    try {
+      await accion()
+      onClose()
+    } catch (err) {
+      setActionError(err instanceof Error ? err.message : 'No se pudo completar la accion')
+    }
+  }
 
   return (
     <div className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4" onClick={onClose}>
@@ -608,6 +629,16 @@ function VerDetalleCasoModal({ caso, technicians, onReassignCase, onClose }: { c
             <span className={`px-2.5 py-1 rounded-full text-[11px] font-bold ${pc.bg} ${pc.text}`}>{caso.priority}</span>
           </div>
           <div className="flex items-center gap-2">
+            {esReabrible && (
+              <button onClick={() => setReabrirOpen(true)} className="flex items-center gap-1.5 text-xs font-bold text-red-600 bg-red-50 hover:bg-red-100 border border-red-200 rounded-xl px-3 py-2 transition-colors">
+                <RotateCcw size={13} /> Reabrir
+              </button>
+            )}
+            {esCerrable && (
+              <button onClick={() => setCerrarOpen(true)} className="flex items-center gap-1.5 text-xs font-bold text-gray-700 bg-gray-100 hover:bg-gray-200 border border-gray-200 rounded-xl px-3 py-2 transition-colors">
+                <Lock size={13} /> Cerrar
+              </button>
+            )}
             {puedeReasignar && (
               <button onClick={() => setReassignOpen(true)} className="flex items-center gap-1.5 text-xs font-bold text-purple-700 bg-purple-50 hover:bg-purple-100 border border-purple-200 rounded-xl px-3 py-2 transition-colors">
                 <RefreshCw size={13} /> Reasignar
@@ -717,6 +748,30 @@ function VerDetalleCasoModal({ caso, technicians, onReassignCase, onClose }: { c
             await onReassignCase(caso.id, tecnicoId, motivo)
           }}
         />
+      )}
+
+      {cerrarOpen && (
+        <CerrarModal
+          numeroCaso={caso.number}
+          onClose={() => setCerrarOpen(false)}
+          onConfirm={() => ejecutarAccion(() => onCerrarCaso(caso.id))}
+        />
+      )}
+
+      {reabrirOpen && (
+        <ReabrirModal
+          numeroCaso={caso.number}
+          onClose={() => setReabrirOpen(false)}
+          onConfirm={(motivo) => ejecutarAccion(() => onReabrirCaso(caso.id, motivo))}
+        />
+      )}
+
+      {actionError && (
+        <div className="fixed bottom-4 left-4 right-4 z-[80] sm:left-auto sm:right-6 sm:max-w-sm bg-red-600 text-white rounded-xl p-4 text-sm font-medium shadow-lg flex items-start gap-2">
+          <AlertTriangle size={15} className="mt-0.5 flex-shrink-0" />
+          <span className="flex-1">{actionError}</span>
+          <button onClick={() => setActionError('')} className="text-white/70 hover:text-white"><X size={15} /></button>
+        </div>
       )}
     </div>
   )

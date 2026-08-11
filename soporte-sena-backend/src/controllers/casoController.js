@@ -402,8 +402,8 @@ async function iniciarCaso(req, res, next) {
     if (!caso) {
       return errorResponse(res, 404, ERR_NOT_FOUND, 'Caso no encontrado');
     }
-    if (caso.estado !== 'asignado') {
-      return errorResponse(res, 409, ERR_ESTADO_INVALIDO, 'El caso debe estar asignado para iniciar el trabajo');
+    if (caso.estado !== 'asignado' && caso.estado !== 'reabierto') {
+      return errorResponse(res, 409, ERR_ESTADO_INVALIDO, 'El caso debe estar asignado o reabierto para iniciar el trabajo');
     }
     if (caso.tecnico_id !== req.usuario.id && req.usuario.rol?.nombre !== 'administrador') {
       return errorResponse(res, 403, ERR_FORBIDDEN, 'Solo el tecnico asignado puede iniciar este caso');
@@ -520,6 +520,42 @@ async function resolverCaso(req, res, next) {
   }
 }
 
+async function cerrarCaso(req, res, next) {
+  try {
+    // Solo el administrador puede cerrar (la ruta exige requireRol): es la
+    // confirmacion final de que el caso quedo atendido correctamente.
+    const caso = await Caso.findByPk(req.params.id);
+    if (!caso) {
+      return errorResponse(res, 404, ERR_NOT_FOUND, 'Caso no encontrado');
+    }
+    if (caso.estado !== 'resuelto') {
+      return errorResponse(res, 409, ERR_ESTADO_INVALIDO, 'Solo se puede cerrar un caso resuelto');
+    }
+
+    await caso.update({
+      estado: 'cerrado',
+      fecha_cierre: new Date(),
+    });
+
+    await HistorialCaso.create({
+      caso_id: caso.id,
+      accion: 'cerrado',
+      usuario_id: req.usuario.id,
+    });
+
+    // Refresca en vivo los paneles abiertos.
+    publicarEvento('caso_actualizado', {
+      numero_caso: caso.numero_caso,
+      caso_id: caso.id,
+      accion: 'cerrado',
+    });
+
+    return successResponse(res, 200, caso, 'Caso cerrado');
+  } catch (err) {
+    next(err);
+  }
+}
+
 async function reabrirCaso(req, res, next) {
   try {
     const caso = await Caso.findByPk(req.params.id);
@@ -565,5 +601,6 @@ module.exports = {
   iniciarCaso,
   agregarNota,
   resolverCaso,
+  cerrarCaso,
   reabrirCaso,
 };

@@ -1,9 +1,11 @@
-import { useState } from 'react'
-import { ChevronLeft, MapPin, Tag, User, Camera, CheckCircle2, AlertTriangle, X, Clock, FileText, UserCheck, ArrowRight, Eye, RefreshCw } from 'lucide-react'
+import { useEffect, useState } from 'react'
+import { ChevronLeft, MapPin, Tag, User, Camera, CheckCircle2, AlertTriangle, X, Clock, FileText, UserCheck, ArrowRight, Eye, RefreshCw, Lock, RotateCcw } from 'lucide-react'
 import { type Case, PRIORITY_COLORS, formatDate } from '../data/mockData'
 import PhotoPicker, { type PhotoItem } from './PhotoPicker'
 import { urlFoto } from '../api/client'
 import ReasignarModal, { type TecnicoOpcion } from './ReasignarModal'
+import CerrarModal from './CerrarModal'
+import ReabrirModal from './ReabrirModal'
 
 interface Props {
   caseData: Case
@@ -16,13 +18,17 @@ interface Props {
   puedeReasignar?: boolean
   tecnicos?: TecnicoOpcion[]
   onReassign?: (tecnicoId: string, motivo: string) => Promise<Case>
+  /** Solo el administrador puede cerrar o reabrir casos */
+  esAdmin?: boolean
+  onCerrarCaso?: () => Promise<Case>
+  onReabrirCaso?: (motivo: string) => Promise<Case>
 }
 
 type LocalStatus = 'Abierto' | 'Asignado' | 'En proceso' | 'Resuelto'
 
 const STATUS_STEPS: LocalStatus[] = ['Abierto', 'Asignado', 'En proceso', 'Resuelto']
 
-export default function CaseDetail({ caseData, techName, onBack, onTakeCase, onStartWork, onResolve, puedeReasignar, tecnicos, onReassign }: Props) {
+export default function CaseDetail({ caseData, techName, onBack, onTakeCase, onStartWork, onResolve, puedeReasignar, tecnicos, onReassign, esAdmin, onCerrarCaso, onReabrirCaso }: Props) {
   const [caso, setCaso] = useState<Case>(caseData)
   const [notasResolucion, setNotasResolucion] = useState('')
   const [evidencePhotosList, setEvidencePhotosList] = useState<PhotoItem[]>([])
@@ -32,6 +38,17 @@ export default function CaseDetail({ caseData, techName, onBack, onTakeCase, onS
   const [viewingPhoto, setViewingPhoto] = useState<string | null>(null)
   const [reassignOpen, setReassignOpen] = useState(false)
   const [reassignError, setReassignError] = useState('')
+  const [cerrarOpen, setCerrarOpen] = useState(false)
+  const [cerrarError, setCerrarError] = useState('')
+  const [reabrirOpen, setReabrirOpen] = useState(false)
+  const [reabrirError, setReabrirError] = useState('')
+
+  // Cuando la pagina recarga el caso (refresco SSE en vivo o tras una accion),
+  // el prop cambia y el estado interno debe seguirlo: si no, el detalle
+  // abierto quedaria mostrando datos viejos.
+  useEffect(() => {
+    setCaso(caseData)
+  }, [caseData])
 
   const status: LocalStatus =
     caso.status === 'Resuelto' || caso.status === 'Cerrado' ? 'Resuelto' :
@@ -84,6 +101,36 @@ export default function CaseDetail({ caseData, techName, onBack, onTakeCase, onS
       setCaso(actualizado)
     } catch (err) {
       setResolveError(err instanceof Error ? err.message : 'No se pudo resolver el caso. Intenta de nuevo.')
+    } finally {
+      setBusy(false)
+    }
+  }
+
+  const handleCerrarCaso = async () => {
+    if (!onCerrarCaso) return
+    setCerrarError('')
+    setBusy(true)
+    try {
+      const actualizado = await onCerrarCaso()
+      setCaso(actualizado)
+    } catch (err) {
+      setCerrarError(err instanceof Error ? err.message : 'No se pudo cerrar el caso')
+      setCerrarOpen(false)
+    } finally {
+      setBusy(false)
+    }
+  }
+
+  const handleReabrirCaso = async (motivo: string) => {
+    if (!onReabrirCaso) return
+    setReabrirError('')
+    setBusy(true)
+    try {
+      const actualizado = await onReabrirCaso(motivo)
+      setCaso(actualizado)
+    } catch (err) {
+      setReabrirError(err instanceof Error ? err.message : 'No se pudo reabrir el caso')
+      setReabrirOpen(false)
     } finally {
       setBusy(false)
     }
@@ -293,7 +340,7 @@ export default function CaseDetail({ caseData, techName, onBack, onTakeCase, onS
                 <div className="w-14 h-14 bg-green-100 rounded-full flex items-center justify-center mx-auto mb-3">
                   <CheckCircle2 size={28} className="text-green-600" />
                 </div>
-                <p className="font-black text-green-800 text-lg">¡Caso resuelto!</p>
+                <p className="font-black text-green-800 text-lg">{caso.status === 'Cerrado' ? '¡Caso cerrado!' : '¡Caso resuelto!'}</p>
                 <p className="text-sm text-green-600 mt-1">Resuelto por <span className="font-bold">{caso.assignedTo?.name || techName}</span></p>
 
                 {/* Galería de evidencias de resolución */}
@@ -317,6 +364,29 @@ export default function CaseDetail({ caseData, techName, onBack, onTakeCase, onS
                         )
                       })}
                     </div>
+                  </div>
+                )}
+                {/* Acciones administrativas: cerrar (solo resuelto) y reabrir */}
+                {esAdmin && (
+                  <div className="mt-5 pt-4 border-t border-green-200/60 space-y-2">
+                    {caso.status === 'Resuelto' && (
+                      <button
+                        onClick={() => setCerrarOpen(true)}
+                        disabled={busy}
+                        className="w-full bg-sena-navy text-white py-3.5 rounded-2xl font-black text-sm flex items-center justify-center gap-2 shadow-lg hover:bg-[#243550] active:scale-[0.98] transition-all disabled:opacity-70"
+                      >
+                        <Lock size={16} /> Cerrar caso definitivamente
+                      </button>
+                    )}
+                    {['Resuelto', 'Cerrado'].includes(caso.status) && (
+                      <button
+                        onClick={() => setReabrirOpen(true)}
+                        disabled={busy}
+                        className="w-full bg-white border-2 border-red-200 text-red-600 py-3.5 rounded-2xl font-bold text-sm flex items-center justify-center gap-2 hover:bg-red-50 active:scale-[0.98] transition-all disabled:opacity-70"
+                      >
+                        <RotateCcw size={16} /> Reabrir caso
+                      </button>
+                    )}
                   </div>
                 )}
               </div>
@@ -404,6 +474,38 @@ export default function CaseDetail({ caseData, techName, onBack, onTakeCase, onS
           <AlertTriangle size={15} className="mt-0.5 flex-shrink-0" />
           <span className="flex-1">{reassignError}</span>
           <button onClick={() => setReassignError('')} className="text-white/70 hover:text-white"><X size={15} /></button>
+        </div>
+      )}
+
+      {/* Modal Cerrar caso (admin) */}
+      {cerrarOpen && onCerrarCaso && (
+        <CerrarModal
+          numeroCaso={caso.number}
+          onClose={() => setCerrarOpen(false)}
+          onConfirm={handleCerrarCaso}
+        />
+      )}
+      {cerrarError && (
+        <div className="fixed bottom-4 left-4 right-4 z-[80] sm:left-auto sm:right-6 sm:max-w-sm bg-red-600 text-white rounded-xl p-4 text-sm font-medium shadow-lg flex items-start gap-2">
+          <AlertTriangle size={15} className="mt-0.5 flex-shrink-0" />
+          <span className="flex-1">{cerrarError}</span>
+          <button onClick={() => setCerrarError('')} className="text-white/70 hover:text-white"><X size={15} /></button>
+        </div>
+      )}
+
+      {/* Modal Reabrir caso (admin) */}
+      {reabrirOpen && onReabrirCaso && (
+        <ReabrirModal
+          numeroCaso={caso.number}
+          onClose={() => setReabrirOpen(false)}
+          onConfirm={handleReabrirCaso}
+        />
+      )}
+      {reabrirError && (
+        <div className="fixed bottom-4 left-4 right-4 z-[80] sm:left-auto sm:right-6 sm:max-w-sm bg-red-600 text-white rounded-xl p-4 text-sm font-medium shadow-lg flex items-start gap-2">
+          <AlertTriangle size={15} className="mt-0.5 flex-shrink-0" />
+          <span className="flex-1">{reabrirError}</span>
+          <button onClick={() => setReabrirError('')} className="text-white/70 hover:text-white"><X size={15} /></button>
         </div>
       )}
     </div>

@@ -93,6 +93,7 @@ export const api = {
     iniciar: (id) => request(`/casos/${id}/iniciar`, { method: 'POST' }),
     agregarNota: (id, nota) => request(`/casos/${id}/notas`, { method: 'POST', body: { nota } }),
     resolver: (id, formData) => request(`/casos/${id}/resolver`, { method: 'POST', body: formData }),
+    cerrar: (id) => request(`/casos/${id}/cerrar`, { method: 'POST' }),
     reabrir: (id, motivo) => request(`/casos/${id}/reabrir`, { method: 'POST', body: { motivo } }),
   },
   auth: {
