@@ -112,6 +112,16 @@ export default function AdminPage() {
     await cargarTodo()
   }
 
+  const handleCerrarCaso = async (caseId) => {
+    await api.casos.cerrar(caseId)
+    await cargarTodo()
+  }
+
+  const handleReabrirCaso = async (caseId, motivo) => {
+    await api.casos.reabrir(caseId, motivo)
+    await cargarTodo()
+  }
+
   const handleEditarTecnico = async (id, datos) => {
     await api.usuarios.actualizar(id, datos)
     await cargarTodo()
@@ -170,6 +180,8 @@ export default function AdminPage() {
       onInvitar={handleInvitar}
       onAssignCase={handleAssignCase}
       onReassignCase={handleReassignCase}
+      onCerrarCaso={handleCerrarCaso}
+      onReabrirCaso={handleReabrirCaso}
       onEditarTecnico={handleEditarTecnico}
       onCrearCategoria={handleCrearCategoria}
       onEditarCategoria={handleEditarCategoria}
