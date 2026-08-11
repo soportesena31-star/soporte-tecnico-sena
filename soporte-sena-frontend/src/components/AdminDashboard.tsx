@@ -490,16 +490,15 @@ function CasesSection({ cases, technicians, onAssignCase, onReassignCase, onCerr
     }).catch(() => { /* se conserva la vista resumida */ })
   }
 
-  // Deep link desde notificacion: abre el modal del caso indicado una sola vez
-  // por valor de ?caso=, cuando el listado ya lo tiene cargado.
-  const casoInicialAbierto = useRef<string | null>(null)
+  // Deep link desde notificacion: abre el modal del caso indicado cuando el
+  // listado ya lo tiene cargado. Sin guard por valor: el parametro ?caso= se
+  // limpia en AdminPage apenas llega, asi que aqui solo se ve un render con
+  // valor; si la campana reabre el mismo caso (mismo valor), vuelve a entrar
+  // y el modal se reabre, sin quedar 'armado' en la URL.
   useEffect(() => {
-    if (!casoInicial || casoInicialAbierto.current === casoInicial) return
+    if (!casoInicial) return
     const caso = cases.find((c) => c.number.toLowerCase() === casoInicial.toLowerCase())
-    if (caso) {
-      casoInicialAbierto.current = casoInicial
-      abrirDetalle(caso)
-    }
+    if (caso) abrirDetalle(caso)
   }, [casoInicial, cases])
 
   const filtered = cases.filter(c => {

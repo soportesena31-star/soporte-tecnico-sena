@@ -18,16 +18,13 @@ export default function AdminPage() {
   const [errorCarga, setErrorCarga] = useState('')
 
   // Deep link desde notificacion: ?caso=NUMERO abre ese caso en el panel.
-  // El parametro se consume una vez (por valor) y se limpia para no reabrir
-  // el modal al recargar; asi la campana puede reabrir casos en cualquier
-  // momento con un ?caso= nuevo o repetido.
+  // El parametro se limpia apenas llega (sin importar si ya se uso con el
+  // mismo valor): si quedara en la URL, cada regreso a la seccion de casos
+  // reabriria el modal (bucle). La campana puede reabrir casos en cualquier
+  // momento con un ?caso= nuevo o repetido: cada llegada reinicia el flujo.
   const casoInicial = searchParams.get('caso')
-  const casoConsumido = useRef(null)
   useEffect(() => {
-    if (casoInicial && casoConsumido.current !== casoInicial) {
-      casoConsumido.current = casoInicial
-      setSearchParams({}, { replace: true })
-    }
+    if (casoInicial) setSearchParams({}, { replace: true })
   }, [casoInicial, setSearchParams])
 
   // Evita que una carga vieja pise a una mas reciente cuando varias se
