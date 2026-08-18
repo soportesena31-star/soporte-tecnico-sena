@@ -8,6 +8,8 @@ const HistorialCaso = require('./HistorialCaso');
 const TokenAcceso = require('./TokenAcceso');
 const Configuracion = require('./Configuracion');
 const PushSuscripcion = require('./PushSuscripcion');
+const Horario = require('./Horario');
+const HorarioTecnico = require('./HorarioTecnico');
 
 // El alias 'rol' es a proposito: usuario.rol devuelve la instancia de Role
 // completa cuando esta incluida, y Usuario.toJSON() la aplana a un string
@@ -60,6 +62,20 @@ PushSuscripcion.belongsTo(Usuario, {
   foreignKey: 'usuario_id', as: 'usuario', onDelete: 'CASCADE', onUpdate: 'CASCADE',
 });
 
+// Panel de horarios: la grilla semanal vive en horarios_tecnicos y apunta al
+// catalogo horarios. Borrar un tecnico arrastra su grilla; desactivar un
+// turno del catalogo deja las semanas ya guardadas con su chip (SET NULL no
+// aplica porque horario_id se conserva a proposito: el turno desactivado
+// sigue visible en semanas historicas).
+Usuario.hasMany(HorarioTecnico, { foreignKey: 'tecnico_id', as: 'horariosSemana' });
+HorarioTecnico.belongsTo(Usuario, {
+  foreignKey: 'tecnico_id', as: 'tecnico', onDelete: 'CASCADE', onUpdate: 'CASCADE',
+});
+Horario.hasMany(HorarioTecnico, { foreignKey: 'horario_id', as: 'asignaciones' });
+HorarioTecnico.belongsTo(Horario, {
+  foreignKey: 'horario_id', as: 'horario', onDelete: 'SET NULL', onUpdate: 'CASCADE',
+});
+
 module.exports = {
   sequelize,
   Espacio,
@@ -71,4 +87,6 @@ module.exports = {
   TokenAcceso,
   Configuracion,
   PushSuscripcion,
+  Horario,
+  HorarioTecnico,
 };

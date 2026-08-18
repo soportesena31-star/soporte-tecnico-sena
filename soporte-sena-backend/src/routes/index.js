@@ -14,5 +14,6 @@ router.use('/roles', require('./roleRoutes'));
 router.use('/qr', require('./qrRoutes'));
 router.use('/configuracion', require('./configuracionRoutes'));
 router.use('/push', require('./pushRoutes'));
+router.use('/horarios', require('./horarioRoutes'));
 
 module.exports = router;

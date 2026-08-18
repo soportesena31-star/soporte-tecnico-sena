@@ -1,6 +1,6 @@
 require('dotenv').config();
 const {
-  sequelize, Categoria, Usuario, Role,
+  sequelize, Categoria, Usuario, Role, Horario,
 } = require('../models');
 
 const ROLES = [
@@ -18,6 +18,16 @@ const CATEGORIAS = [
   { nombre: 'Otro', prioridad_sugerida: 'baja' },
 ];
 
+// Turnos base del panel de horarios. El 8-5 es especial: es el unico turno
+// que se puede asignar al sabado (regla de cobertura del panel).
+const HORARIOS = [
+  { nombre: '6-2', hora_inicio: '06:00', hora_fin: '14:00' },
+  { nombre: '7-4', hora_inicio: '07:00', hora_fin: '16:00' },
+  { nombre: '8-5', hora_inicio: '08:00', hora_fin: '17:00' },
+  { nombre: '8-4', hora_inicio: '08:00', hora_fin: '16:00' },
+  { nombre: '2-9', hora_inicio: '14:00', hora_fin: '21:00' },
+];
+
 async function seed() {
   await sequelize.authenticate();
 
@@ -30,6 +40,11 @@ async function seed() {
     await Categoria.findOrCreate({ where: { nombre: cat.nombre }, defaults: cat });
   }
   console.log('Categorias listas');
+
+  for (const h of HORARIOS) {
+    await Horario.findOrCreate({ where: { nombre: h.nombre }, defaults: h });
+  }
+  console.log('Turnos base listos');
 
   const rolAdmin = await Role.findOne({ where: { nombre: 'administrador' } });
   const rolTecnico = await Role.findOne({ where: { nombre: 'tecnico' } });

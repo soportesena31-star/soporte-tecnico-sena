@@ -135,6 +135,15 @@ export const api = {
     tecnicos: () => request('/usuarios/tecnicos'),
     actualizar: (id, datos) => request(`/usuarios/${id}`, { method: 'PUT', body: datos }),
   },
+  horarios: {
+    listar: () => request('/horarios'),
+    crear: (datos) => request('/horarios', { method: 'POST', body: datos }),
+    actualizar: (id, datos) => request(`/horarios/${id}`, { method: 'PUT', body: datos }),
+  },
+  horariosTecnicos: {
+    grilla: (semana) => request('/horarios/tecnicos', { query: { semana } }),
+    guardarTecnico: (tecnicoId, datos) => request(`/horarios/tecnicos/${tecnicoId}`, { method: 'PUT', body: datos }),
+  },
   historial: {
     listar: (query) => request('/historial', { query }),
     descargar: async (limite = 200) => {

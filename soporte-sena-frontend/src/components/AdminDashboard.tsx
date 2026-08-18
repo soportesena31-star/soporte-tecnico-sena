@@ -16,8 +16,9 @@ import { STATUS_COLORS, PRIORITY_COLORS, formatDate, type Case, type Space } fro
 import ReasignarModal from './ReasignarModal'
 import CerrarModal from './CerrarModal'
 import ReabrirModal from './ReabrirModal'
+import HorariosSection from './HorariosSection'
 
-type Section = 'dashboard' | 'cases' | 'spaces' | 'technicians' | 'categories' | 'reports' | 'history' | 'settings'
+type Section = 'dashboard' | 'cases' | 'spaces' | 'technicians' | 'horarios' | 'categories' | 'reports' | 'history' | 'settings'
 
 interface Technician { id: string; name: string; email: string; role: string; avatar: string; casesResolved: number; activo?: boolean }
 interface Categoria { id: string; name: string; priority: string; count: number }
@@ -55,6 +56,7 @@ const NAV = [
   { id: 'cases', icon: Ticket, label: 'Casos' },
   { id: 'spaces', icon: Building2, label: 'Espacios' },
   { id: 'technicians', icon: Users, label: 'Técnicos' },
+  { id: 'horarios', icon: Clock, label: 'Horarios' },
   { id: 'categories', icon: Tag, label: 'Categorías' },
   { id: 'reports', icon: BarChart3, label: 'Reportes' },
   { id: 'history', icon: History, label: 'Historial' },
@@ -233,6 +235,7 @@ export default function AdminDashboard({ onLogout, adminName, cases, spaces, tec
           {section === 'cases' && <CasesSection cases={cases} technicians={technicians} onAssignCase={onAssignCase} onReassignCase={onReassignCase} onCerrarCaso={onCerrarCaso} onReabrirCaso={onReabrirCaso} tecnicoFilter={tecnicoFiltro} onTecnicoFilterChange={setTecnicoFiltro} casoInicial={casoInicial} />}
           {section === 'spaces' && <SpacesSection spaces={spaces} cases={cases} onCreateSpace={onCreateSpace} onUpdateSpace={onUpdateSpace} onToggleSpace={onToggleSpace} />}
           {section === 'technicians' && <TechniciansSection technicians={technicians} cases={cases} roles={roles} onInvitar={onInvitar} onEditarTecnico={onEditarTecnico} onVerCasos={(id) => { setTecnicoFiltro(id); setSection('cases') }} />}
+          {section === 'horarios' && <HorariosSection technicians={technicians} />}
           {section === 'categories' && <CategoriesSection categories={categories} onCrear={onCrearCategoria} onEditar={onEditarCategoria} onEliminar={onEliminarCategoria} />}
           {section === 'reports' && <ReportsSection technicians={technicians} categories={categories} />}
           {section === 'history' && <HistorySection historyLog={historyLog} />}
