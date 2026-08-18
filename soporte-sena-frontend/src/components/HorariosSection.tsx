@@ -70,8 +70,6 @@ const formatearSemana = (semana: string) => {
   return d.toLocaleDateString('es-CO', { day: 'numeric', month: 'long' })
 }
 
-const horaCorta = (h: string | null) => (h ? h.slice(0, 5) : '')
-
 export default function HorariosSection({ technicians }: Props) {
   const [semana, setSemana] = useState(() => fmtFecha(lunesDe(new Date())))
   const [turnos, setTurnos] = useState<Turno[]>([])
@@ -336,12 +334,12 @@ export default function HorariosSection({ technicians }: Props) {
                                       <option value="">—</option>
                                       {!esSabado && turnos.filter((tu) => tu.activo).map((tu) => (
                                         <option key={tu.id} value={tu.id}>
-                                          {tu.nombre} · {horaCorta(tu.hora_inicio)}-{horaCorta(tu.hora_fin)}
+                                          {tu.nombre}
                                         </option>
                                       ))}
                                       {esSabado && turnoSabado && (
                                         <option value={turnoSabado.id}>
-                                          8-5 · Trabaja · {horaCorta(turnoSabado.hora_inicio)}-{horaCorta(turnoSabado.hora_fin)}
+                                          8-5 · Trabaja
                                         </option>
                                       )}
                                       {!esSabado && (
