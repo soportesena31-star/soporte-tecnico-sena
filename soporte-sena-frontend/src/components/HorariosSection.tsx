@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useMemo, useState, type ChangeEvent } from 'react'
 import { api } from '../api/client'
 import {
-  ChevronLeft, ChevronRight, Clock, Plus, X,
+  ChevronDown, ChevronLeft, ChevronRight, Clock, Plus, X,
   AlertTriangle, Check, CalendarDays, Loader2, Save,
 } from 'lucide-react'
 
@@ -274,7 +274,7 @@ export default function HorariosSection({ technicians }: Props) {
                       Técnico
                     </th>
                     {DIAS.map((d) => (
-                      <th key={d.n} className={`text-center px-3 py-3 text-xs font-bold text-gray-500 min-w-[96px] ${d.n === DIA_SABADO ? 'bg-orange-50' : ''}`}>
+                      <th key={d.n} className={`text-center px-3 py-3 text-xs font-bold text-gray-500 min-w-[140px] ${d.n === DIA_SABADO ? 'bg-orange-50' : ''}`}>
                         {d.label}
                         {d.n === DIA_SABADO && (
                           <span className="block text-[10px] font-semibold text-orange-600 mt-0.5">
@@ -313,39 +313,44 @@ export default function HorariosSection({ technicians }: Props) {
                           const definido = esSabado ? trabajando : fila.horario_id !== null || esDescanso
                           return (
                             <td key={d.n} className={`px-2 py-2 text-center ${esSabado ? 'bg-orange-50/40' : ''}`}>
-                              <div className="flex justify-center">
+                              <div className="relative flex justify-center">
                                 {(() => {
                                   const valorCelda = valoresSelect[`${t.id}-${d.n}`] ??
                                     (fila.horario_id ? String(fila.horario_id) : !esSabado && fila.descanso ? 'descanso' : '')
                                   return (
-                                    <select
-                                      value={valorCelda}
-                                      onChange={(e) => cambiarDia(e, t.id, d.n)}
-                                      disabled={guardandoId === t.id}
-                                      title={esSabado && comp ? 'Trabaja sabado sin descanso compensatorio entre semana' : undefined}
-                                      className={`w-full max-w-[120px] cursor-pointer rounded-lg border px-2 py-1.5 text-center text-xs font-bold transition-colors hover:shadow-sm focus:outline-none focus:border-sena-green disabled:opacity-60 ${
-                                        !definido
-                                          ? 'border-dashed border-gray-300 bg-transparent text-gray-400'
-                                          : esDescanso
-                                            ? 'bg-gray-100 text-gray-500 border-gray-200'
-                                            : `${colorTurno(fila.horario_nombre)} ${esSabado && comp ? 'ring-2 ring-amber-400' : ''}`
-                                      }`}
-                                    >
-                                      <option value="">—</option>
-                                      {!esSabado && turnos.filter((tu) => tu.activo).map((tu) => (
-                                        <option key={tu.id} value={tu.id}>
-                                          {tu.nombre}
-                                        </option>
-                                      ))}
-                                      {esSabado && turnoSabado && (
-                                        <option value={turnoSabado.id}>
-                                          8-5 · Trabaja
-                                        </option>
-                                      )}
-                                      {!esSabado && (
-                                        <option value="descanso">Descanso</option>
-                                      )}
-                                    </select>
+                                    <>
+                                      <select
+                                        value={valorCelda}
+                                        onChange={(e) => cambiarDia(e, t.id, d.n)}
+                                        disabled={guardandoId === t.id}
+                                        title={esSabado && comp ? 'Trabaja sabado sin descanso compensatorio entre semana' : undefined}
+                                        className={`w-[120px] cursor-pointer appearance-none rounded-lg border pl-2 pr-7 py-1.5 text-center text-xs font-bold transition-all hover:shadow-sm focus:outline-none focus:border-sena-green focus:ring-2 focus:ring-sena-green/20 disabled:opacity-60 ${
+                                          !definido
+                                            ? 'border-dashed border-gray-300 bg-white text-gray-400'
+                                            : esDescanso
+                                              ? 'bg-gray-100 text-gray-500 border-gray-200'
+                                              : `${colorTurno(fila.horario_nombre)} ${esSabado && comp ? 'ring-2 ring-amber-400' : ''}`
+                                        }`}
+                                      >
+                                        <option value="">—</option>
+                                        {!esSabado && turnos.filter((tu) => tu.activo).map((tu) => (
+                                          <option key={tu.id} value={tu.id}>
+                                            {tu.nombre}
+                                          </option>
+                                        ))}
+                                        {esSabado && turnoSabado && (
+                                          <option value={turnoSabado.id}>
+                                            8-5 · Trabaja
+                                          </option>
+                                        )}
+                                        {!esSabado && (
+                                          <option value="descanso">Descanso</option>
+                                        )}
+                                      </select>
+                                      <span className="pointer-events-none absolute inset-y-0 right-2 flex items-center text-gray-400">
+                                        <ChevronDown size={12} />
+                                      </span>
+                                    </>
                                   )
                                 })()}
                               </div>
