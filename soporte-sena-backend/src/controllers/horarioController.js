@@ -107,13 +107,17 @@ async function guardarTecnicoSemana(req, res, next) {
     const { semana, dias } = req.body;
 
     // Normaliza cada dia: descanso o turno (nunca ambos).
-    const normalizados = dias.map((d) => ({
-      tecnico_id: tecnico.id,
-      dia_semana: d.dia_semana,
-      semana,
-      horario_id: d.descanso ? null : (d.horario_id || null),
-      descanso: d.descanso === true,
-    }));
+    const normalizados = dias.map((d) => {
+      // El dia de descanso es entre semana: un "descanso" en sabado se trata como sin definir.
+      const descanso = d.descanso === true && d.dia_semana !== DIA_SABADO;
+      return {
+        tecnico_id: tecnico.id,
+        dia_semana: d.dia_semana,
+        semana,
+        horario_id: descanso ? null : d.horario_id || null,
+        descanso,
+      };
+    });
 
     // Valida que los turnos existan y esten activos.
     const idsTurnos = [...new Set(normalizados.filter((n) => n.horario_id).map((n) => n.horario_id))];
@@ -154,10 +158,12 @@ async function guardarTecnicoSemana(req, res, next) {
       }
     }
 
-    // Reemplaza la semana del tecnico (idempotente).
+    // Reemplaza la semana del tecnico (idempotente). Los dias sin contenido
+    // (sin turno y sin descanso, es decir "sin definir") no generan registro.
     await HorarioTecnico.destroy({ where: { tecnico_id: tecnico.id, semana }, transaction });
-    if (normalizados.length > 0) {
-      await HorarioTecnico.bulkCreate(normalizados, { transaction });
+    const conContenido = normalizados.filter((n) => n.horario_id || n.descanso);
+    if (conContenido.length > 0) {
+      await HorarioTecnico.bulkCreate(conContenido, { transaction });
     }
 
     await transaction.commit();

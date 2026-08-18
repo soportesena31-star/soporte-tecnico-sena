@@ -1,7 +1,7 @@
-import { useCallback, useEffect, useMemo, useState } from 'react'
+import { useCallback, useEffect, useMemo, useState, type ChangeEvent } from 'react'
 import { api } from '../api/client'
 import {
-  ChevronLeft, ChevronRight, Clock, Plus, X, Moon, Power,
+  ChevronLeft, ChevronRight, Clock, Plus, X,
   AlertTriangle, Check, CalendarDays, Loader2, Save,
 } from 'lucide-react'
 
@@ -80,7 +80,9 @@ export default function HorariosSection({ technicians }: Props) {
   const [error, setError] = useState('')
   const [aviso, setAviso] = useState('')
   const [guardandoId, setGuardandoId] = useState<string | null>(null)
-  const [celdaAbierta, setCeldaAbierta] = useState<{ t: string; dia: number } | null>(null)
+  // Valor temporal elegido en cada select mientras se guarda; si el guardado
+  // falla, el select vuelve al valor que venia de la grilla.
+  const [valoresSelect, setValoresSelect] = useState<Record<string, string>>({})
   const [showTurnos, setShowTurnos] = useState(false)
 
   const tecnicos = useMemo(
@@ -167,23 +169,47 @@ export default function HorariosSection({ technicians }: Props) {
     }
   }
 
-  // Sabado: alterna entre trabajar (turno 8-5 fijo) y descanso.
-  const toggleSabado = async (t: string) => {
+  // Maneja el cambio de cualquier celda (L-V y sabado) desde su select nativo.
+  // '' = sin definir, 'descanso' = descanso, de lo contrario el id del turno.
+  const cambiarDia = async (e: ChangeEvent<HTMLSelectElement>, t: string, dia: number) => {
+    const v = e.target.value
+    const clave = `${t}-${dia}`
+    setValoresSelect((prev) => ({ ...prev, [clave]: v }))
     setError('')
-    const actual = diaDe(t, DIA_SABADO)
-    if (actual.horario_id) {
-      await aplicarDia(t, DIA_SABADO, null, true)
-      return
+    setAviso('')
+    try {
+      if (dia === DIA_SABADO && v && v !== 'descanso') {
+        if (!turnoSabado) {
+          setError(`No existe el turno ${NOMBRE_TURNO_SABADO} en el catalogo de turnos`)
+          return
+        }
+        if (!diaDe(t, dia).horario_id && sabadosAsignados >= MAX_SABADO) {
+          setError(`El sabado ya tiene ${MAX_SABADO} tecnicos asignados (maximo permitido)`)
+          return
+        }
+      }
+      if (v === '') {
+        await aplicarDia(t, dia, null, false)
+      } else if (v === 'descanso') {
+        await aplicarDia(t, dia, null, true)
+      } else {
+        await aplicarDia(t, dia, Number(v), false)
+      }
+    } finally {
+      // Sin el valor temporal, el select muestra lo que quedo guardado en la
+      // grilla (si el guardado fallo, vuelve al estado anterior).
+      setValoresSelect((prev) => {
+        const n = { ...prev }
+        delete n[clave]
+        return n
+      })
     }
-    if (!turnoSabado) {
-      setError(`No existe el turno ${NOMBRE_TURNO_SABADO} en el catalogo de turnos`)
-      return
-    }
-    if (sabadosAsignados >= MAX_SABADO) {
-      setError(`El sabado ya tiene ${MAX_SABADO} tecnicos asignados (maximo permitido)`)
-      return
-    }
-    await aplicarDia(t, DIA_SABADO, turnoSabado.id, false)
+  }
+
+  const navegarSemana = (delta: number) => {
+    const d = new Date(`${semana}T00:00:00`)
+    d.setDate(d.getDate() + delta * 7)
+    setSemana(fmtFecha(d))
   }
 
   // Compensacion suave: quien trabaja sabado sin ningun descanso L-V se avisa.
@@ -191,13 +217,6 @@ export default function HorariosSection({ technicians }: Props) {
     const sab = diaDe(t, DIA_SABADO)
     if (!sab.horario_id) return false
     return !DIAS.filter((d) => d.n !== DIA_SABADO).some((d) => diaDe(t, d.n).descanso)
-  }
-
-  const navegarSemana = (delta: number) => {
-    const d = new Date(`${semana}T00:00:00`)
-    d.setDate(d.getDate() + delta * 7)
-    setSemana(fmtFecha(d))
-    setCeldaAbierta(null)
   }
 
   return (
@@ -293,76 +312,44 @@ export default function HorariosSection({ technicians }: Props) {
                           const fila = diaDe(t.id, d.n)
                           const esSabado = d.n === DIA_SABADO
                           const esDescanso = fila.descanso
-                          const definido = esSabado ? trabajando || esDescanso : fila.horario_id !== null || esDescanso
+                          const definido = esSabado ? trabajando : fila.horario_id !== null || esDescanso
                           return (
                             <td key={d.n} className={`px-2 py-2 text-center ${esSabado ? 'bg-orange-50/40' : ''}`}>
-                              <div className="relative flex justify-center">
-                                <button
-                                  onClick={() => esSabado ? toggleSabado(t.id) : setCeldaAbierta({ t: t.id, dia: d.n })}
-                                  disabled={guardandoId === t.id}
-                                  className={`inline-flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg border text-xs font-bold transition-all hover:shadow-sm disabled:opacity-60 ${
-                                    !definido
-                                      ? 'border-dashed border-gray-300 text-gray-400 hover:border-sena-green hover:text-sena-green'
-                                      : esDescanso
-                                        ? 'bg-gray-100 text-gray-500 border-gray-200'
-                                        : `${colorTurno(fila.horario_nombre)} ${esSabado && comp ? 'ring-2 ring-amber-400' : ''}`
-                                  }`}
-                                  title={esSabado && comp ? 'Trabaja sabado sin descanso compensatorio entre semana' : undefined}
-                                >
-                                  {esSabado ? (
-                                    trabajando ? (
-                                      <>
-                                        <Power size={11} /> {fila.horario_nombre || NOMBRE_TURNO_SABADO}
-                                      </>
-                                    ) : esDescanso ? (
-                                      <><Moon size={11} /> Descanso</>
-                                    ) : (
-                                      '—'
-                                    )
-                                  ) : esDescanso ? (
-                                    <><Moon size={11} /> Descanso</>
-                                  ) : fila.horario_nombre ? (
-                                    <>
-                                      {fila.horario_nombre}
-                                      {(fila.hora_inicio || fila.hora_fin) && (
-                                        <span className="text-[9px] font-medium opacity-70">
-                                          {horaCorta(fila.hora_inicio)}-{horaCorta(fila.hora_fin)}
-                                        </span>
-                                      )}
-                                    </>
-                                  ) : (
-                                    '—'
-                                  )}
-                                </button>
-
-                                {/* Popover de turnos para dias L-V */}
-                                {celdaAbierta && celdaAbierta.t === t.id && celdaAbierta.dia === d.n && (
-                                  <>
-                                    <div className="fixed inset-0 z-40" onClick={() => setCeldaAbierta(null)} />
-                                    <div className="absolute z-50 top-full mt-1 w-44 bg-white rounded-xl shadow-xl border border-gray-100 p-1.5">
-                                      {turnos.filter((tu) => tu.activo).map((tu) => (
-                                        <button
-                                          key={tu.id}
-                                          onClick={() => { setCeldaAbierta(null); aplicarDia(t.id, d.n, tu.id, false) }}
-                                          className={`w-full text-left px-2.5 py-2 rounded-lg text-xs font-bold flex items-center justify-between hover:bg-gray-50 ${fila.horario_id === tu.id ? 'bg-gray-50' : ''}`}
-                                        >
-                                          <span>{tu.nombre}</span>
-                                          <span className="text-[9px] font-medium text-gray-400">{horaCorta(tu.hora_inicio)}-{horaCorta(tu.hora_fin)}</span>
-                                        </button>
+                              <div className="flex justify-center">
+                                {(() => {
+                                  const valorCelda = valoresSelect[`${t.id}-${d.n}`] ??
+                                    (fila.horario_id ? String(fila.horario_id) : !esSabado && fila.descanso ? 'descanso' : '')
+                                  return (
+                                    <select
+                                      value={valorCelda}
+                                      onChange={(e) => cambiarDia(e, t.id, d.n)}
+                                      disabled={guardandoId === t.id}
+                                      title={esSabado && comp ? 'Trabaja sabado sin descanso compensatorio entre semana' : undefined}
+                                      className={`w-full max-w-[120px] cursor-pointer rounded-lg border px-2 py-1.5 text-center text-xs font-bold transition-colors hover:shadow-sm focus:outline-none focus:border-sena-green disabled:opacity-60 ${
+                                        !definido
+                                          ? 'border-dashed border-gray-300 bg-transparent text-gray-400'
+                                          : esDescanso
+                                            ? 'bg-gray-100 text-gray-500 border-gray-200'
+                                            : `${colorTurno(fila.horario_nombre)} ${esSabado && comp ? 'ring-2 ring-amber-400' : ''}`
+                                      }`}
+                                    >
+                                      <option value="">—</option>
+                                      {!esSabado && turnos.filter((tu) => tu.activo).map((tu) => (
+                                        <option key={tu.id} value={tu.id}>
+                                          {tu.nombre} · {horaCorta(tu.hora_inicio)}-{horaCorta(tu.hora_fin)}
+                                        </option>
                                       ))}
-                                      <div className="border-t border-gray-100 my-1" />
-                                      <button
-                                        onClick={() => { setCeldaAbierta(null); aplicarDia(t.id, d.n, null, true) }}
-                                        className={`w-full text-left px-2.5 py-2 rounded-lg text-xs font-bold flex items-center gap-1.5 hover:bg-gray-50 ${fila.descanso ? 'bg-gray-50 text-gray-500' : 'text-gray-500'}`}
-                                      >
-                                        <Moon size={11} /> Descanso
-                                      </button>
-                                      {turnos.filter((tu) => tu.activo).length === 0 && (
-                                        <p className="px-2.5 py-2 text-[10px] text-gray-400">No hay turnos activos</p>
+                                      {esSabado && turnoSabado && (
+                                        <option value={turnoSabado.id}>
+                                          8-5 · Trabaja · {horaCorta(turnoSabado.hora_inicio)}-{horaCorta(turnoSabado.hora_fin)}
+                                        </option>
                                       )}
-                                    </div>
-                                  </>
-                                )}
+                                      {!esSabado && (
+                                        <option value="descanso">Descanso</option>
+                                      )}
+                                    </select>
+                                  )
+                                })()}
                               </div>
                             </td>
                           )
@@ -375,9 +362,9 @@ export default function HorariosSection({ technicians }: Props) {
             </div>
           </div>
 
-          <p className="text-[11px] text-gray-400 flex items-center gap-1.5">
-            <Power size={11} className="text-orange-500" /> Sábado: 1 o 2 técnicos con turno 8-5 fijo · quien trabaja sábado puede descansar un día entre semana (aviso ámbar, no bloquea)
-          </p>
+          <p className="text-[11px] text-gray-400">
+              — deja el día en blanco · Sábado: 1 o 2 técnicos con turno 8-5 fijo (sin descanso) · quien trabaja sábado puede descansar un día entre semana (aviso ámbar, no bloquea)
+            </p>
         </>
       )}
 
