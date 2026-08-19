@@ -1,4 +1,5 @@
 require('dotenv').config();
+const { Op } = require('sequelize');
 const {
   sequelize, Categoria, Usuario, Role, Horario,
 } = require('../models');
@@ -18,13 +19,15 @@ const CATEGORIAS = [
   { nombre: 'Otro', prioridad_sugerida: 'baja' },
 ];
 
-// Turnos base del panel de horarios. El 8-5 es especial: es el unico turno
-// que se puede asignar al sabado (regla de cobertura del panel).
+// Turnos base del panel de horarios. El 8-4 es el turno fijo de sabado
+// (fijo_sabado=true): es el unico que se puede asignar al sabado, regla que
+// aplica el backend. El seed re-marca siempre el 8-4 como fijo para que el
+// catalogo quede coherente aunque el admin haya movido el flag en algun momento.
 const HORARIOS = [
   { nombre: '6-2', hora_inicio: '06:00', hora_fin: '14:00' },
   { nombre: '7-4', hora_inicio: '07:00', hora_fin: '16:00' },
   { nombre: '8-5', hora_inicio: '08:00', hora_fin: '17:00' },
-  { nombre: '8-4', hora_inicio: '08:00', hora_fin: '16:00' },
+  { nombre: '8-4', hora_inicio: '08:00', hora_fin: '16:00', fijo_sabado: true },
   { nombre: '2-9', hora_inicio: '14:00', hora_fin: '21:00' },
 ];
 
@@ -44,6 +47,9 @@ async function seed() {
   for (const h of HORARIOS) {
     await Horario.findOrCreate({ where: { nombre: h.nombre }, defaults: h });
   }
+  // Garantiza el unico turno fijo de sabado (idempotente).
+  await Horario.update({ fijo_sabado: false }, { where: { nombre: { [Op.ne]: '8-4' } } });
+  await Horario.update({ fijo_sabado: true }, { where: { nombre: '8-4' } });
   console.log('Turnos base listos');
 
   const rolAdmin = await Role.findOne({ where: { nombre: 'administrador' } });

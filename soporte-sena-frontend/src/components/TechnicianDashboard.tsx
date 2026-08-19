@@ -34,7 +34,7 @@ const turnoColor = (n: string | null) => {
   if (!n) return ''
   if (n.startsWith('6-2')) return 'bg-emerald-100 text-emerald-700 border-emerald-200'
   if (n.startsWith('7-4')) return 'bg-sky-100 text-sky-700 border-sky-200'
-  if (n.startsWith('8-5')) return 'bg-orange-100 text-orange-700 border-orange-200'
+  if (n.startsWith('8-5') || n.startsWith('8-4')) return 'bg-orange-100 text-orange-700 border-orange-200'
   return 'bg-indigo-100 text-indigo-700 border-indigo-200'
 }
 

@@ -7,6 +7,7 @@ const crearHorarioValidator = [
   body('hora_inicio').matches(HORA_REGEX).withMessage('Hora de inicio invalida (formato HH:MM)'),
   body('hora_fin').matches(HORA_REGEX).withMessage('Hora de fin invalida (formato HH:MM)'),
   body('activo').optional().isBoolean().withMessage('El campo activo debe ser booleano'),
+  body('fijo_sabado').optional().isBoolean().withMessage('El campo fijo_sabado debe ser booleano'),
 ];
 
 const actualizarHorarioValidator = [
@@ -15,6 +16,7 @@ const actualizarHorarioValidator = [
   body('hora_inicio').optional().matches(HORA_REGEX).withMessage('Hora de inicio invalida (formato HH:MM)'),
   body('hora_fin').optional().matches(HORA_REGEX).withMessage('Hora de fin invalida (formato HH:MM)'),
   body('activo').optional().isBoolean().withMessage('El campo activo debe ser booleano'),
+  body('fijo_sabado').optional().isBoolean().withMessage('El campo fijo_sabado debe ser booleano'),
 ];
 
 const guardarTecnicoSemanaValidator = [

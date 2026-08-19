@@ -3,9 +3,11 @@ const { Op } = require('sequelize');
 const { successResponse, errorResponse } = require('../utils/response');
 const { ERR_NOT_FOUND, ERR_VALIDATION } = require('../utils/errorCodes');
 
-// El sabado lo cubren minimo 1 y maximo 2 tecnicos (regla del panel de
-// horarios). El minimo se avisa en el frontend (cobertura); aqui se hace
-// cumplir el maximo para que la semana nunca quede con 3+ tecnicos el sabado.
+// El sabado lo cubren minimo 1 y maximo 2 tecnicos con el turno fijo de
+// sabado (fijo_sabado=true en el catalogo, por defecto el 8-4). Aqui se hace
+// cumplir la regla completa: (a) el unico turno asignable al sabado es el
+// fijo, (b) como maximo 2 tecnicos trabajan ese dia. El minimo se avisa en
+// el frontend (cobertura).
 const MAX_TECNICOS_SABADO = 2;
 const DIA_SABADO = 6;
 
@@ -19,37 +21,57 @@ async function listarHorarios(req, res, next) {
 }
 
 async function crearHorario(req, res, next) {
+  const transaction = await sequelize.transaction();
   try {
-    const { nombre, hora_inicio, hora_fin, activo } = req.body;
+    const { nombre, hora_inicio, hora_fin, activo, fijo_sabado } = req.body;
+
+    // Solo puede existir UN turno fijo de sabado: marcar uno nuevo desmarca los demas.
+    if (fijo_sabado) {
+      await Horario.update({ fijo_sabado: false }, { where: { fijo_sabado: true }, transaction });
+    }
+
     const horario = await Horario.create({
       nombre,
       hora_inicio,
       hora_fin,
       activo: activo !== undefined ? activo : true,
-    });
+      fijo_sabado: fijo_sabado === true,
+    }, { transaction });
+
+    await transaction.commit();
     return successResponse(res, 201, horario, 'Turno creado');
   } catch (err) {
+    await transaction.rollback();
     next(err);
   }
 }
 
 async function actualizarHorario(req, res, next) {
+  const transaction = await sequelize.transaction();
   try {
-    const horario = await Horario.findByPk(req.params.id);
+    const horario = await Horario.findByPk(req.params.id, { transaction });
     if (!horario) {
+      await transaction.rollback();
       return errorResponse(res, 404, ERR_NOT_FOUND, 'Turno no encontrado');
     }
 
-    const { nombre, hora_inicio, hora_fin, activo } = req.body;
+    const { nombre, hora_inicio, hora_fin, activo, fijo_sabado } = req.body;
     const cambios = {};
     if (nombre !== undefined) cambios.nombre = nombre;
     if (hora_inicio !== undefined) cambios.hora_inicio = hora_inicio;
     if (hora_fin !== undefined) cambios.hora_fin = hora_fin;
     if (activo !== undefined) cambios.activo = !!activo;
+    if (fijo_sabado !== undefined) cambios.fijo_sabado = !!fijo_sabado;
 
-    await horario.update(cambios);
+    if (cambios.fijo_sabado) {
+      await Horario.update({ fijo_sabado: false }, { where: { fijo_sabado: true, id: { [Op.ne]: horario.id } }, transaction });
+    }
+
+    await horario.update(cambios, { transaction });
+    await transaction.commit();
     return successResponse(res, 200, horario, 'Turno actualizado');
   } catch (err) {
+    await transaction.rollback();
     next(err);
   }
 }
@@ -177,9 +199,32 @@ async function guardarTecnicoSemana(req, res, next) {
       }
     }
 
-    // Regla del sabado: maximo 2 tecnicos trabajando ese dia en la misma semana.
+    // Regla del sabado (regla de negocio del panel):
+    // 1) El unico turno asignable al sabado es el "fijo de sabado" del catalogo
+    //    (fijo_sabado=true; por defecto el 8-5). Si el catalogo no tiene un
+    //    turno fijo activo, el sabado no se puede asignar a nadie.
+    // 2) Maximo 2 tecnicos trabajando ese dia en la misma semana.
     const sabado = normalizados.find((n) => n.dia_semana === DIA_SABADO && n.horario_id);
     if (sabado) {
+      const turnoFijoSabado = await Horario.findOne({
+        where: { fijo_sabado: true },
+        transaction,
+      });
+      if (!turnoFijoSabado || !turnoFijoSabado.activo) {
+        await transaction.rollback();
+        return errorResponse(
+          res, 400, ERR_VALIDATION,
+          'No hay un turno fijo de sabado activo en el catalogo: marcalo en Editar turnos',
+        );
+      }
+      if (Number(sabado.horario_id) !== turnoFijoSabado.id) {
+        await transaction.rollback();
+        return errorResponse(
+          res, 400, ERR_VALIDATION,
+          `El sabado solo acepta el turno fijo (${turnoFijoSabado.nombre})`,
+        );
+      }
+
       const ocupantesSabado = await HorarioTecnico.count({
         where: {
           semana,

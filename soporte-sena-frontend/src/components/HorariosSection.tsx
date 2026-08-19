@@ -23,16 +23,18 @@ interface Turno {
   hora_inicio: string
   hora_fin: string
   activo: boolean
+  fijo_sabado?: boolean
 }
 
 interface Props {
   technicians: { id: string; name: string; role: string; activo?: boolean }[]
 }
 
-// El sabado lo cubren 1 o 2 tecnicos con el turno 8-5 fijo (regla de negocio).
+// El sabado lo cubren 1 o 2 tecnicos con el turno fijo de sabado del catalogo
+// (fijo_sabado=true, por defecto el 8-4). La regla se aplica en el backend;
+// aqui solo se refleja: el select del sabado ofrece ese turno.
 const DIA_SABADO = 6
 const MAX_SABADO = 2
-const NOMBRE_TURNO_SABADO = '8-5'
 
 const DIAS = [
   { n: 1, label: 'Lun' },
@@ -47,6 +49,7 @@ const COLORES_TURNO: Record<string, string> = {
   '6-2': 'bg-emerald-100 text-emerald-800 border-emerald-200',
   '7-4': 'bg-sky-100 text-sky-800 border-sky-200',
   '8-5': 'bg-orange-100 text-orange-800 border-orange-200',
+  '8-4': 'bg-orange-100 text-orange-800 border-orange-200',
 }
 
 const colorTurno = (nombre: string | null) =>
@@ -112,10 +115,10 @@ export default function HorariosSection({ technicians }: Props) {
 
   useEffect(() => { cargar() }, [cargar])
 
-  const turnoSabado = useMemo(
-    () => turnos.find((t) => t.nombre === NOMBRE_TURNO_SABADO && t.activo) || null,
-    [turnos],
-  )
+const turnoSabado = useMemo(
+  () => turnos.find((t) => t.fijo_sabado && t.activo) || null,
+  [turnos],
+)
 
   // Estado de un dia (L-V) del tecnico: fila guardada o "sin definir".
   const diaDe = (t: string, dia: number): FilaGrilla =>
@@ -178,7 +181,11 @@ export default function HorariosSection({ technicians }: Props) {
     try {
       if (dia === DIA_SABADO && v && v !== 'descanso') {
         if (!turnoSabado) {
-          setError(`No existe el turno ${NOMBRE_TURNO_SABADO} en el catalogo de turnos`)
+          setError('No hay un turno fijo de sabado en el catalogo: marcalo en Editar turnos')
+          return
+        }
+        if (Number(v) !== turnoSabado.id) {
+          setError(`El sabado solo acepta el turno fijo (${turnoSabado.nombre})`)
           return
         }
         if (!diaDe(t, dia).horario_id && sabadosAsignados >= MAX_SABADO) {
@@ -280,7 +287,7 @@ export default function HorariosSection({ technicians }: Props) {
                         {d.label}
                         {d.n === DIA_SABADO && (
                           <span className="block text-[10px] font-semibold text-orange-600 mt-0.5">
-                            {sabadosAsignados}/{MAX_SABADO} · 8-5 fijo
+                            {sabadosAsignados}/{MAX_SABADO} · {turnoSabado?.nombre ?? '—'} fijo
                           </span>
                         )}
                       </th>
@@ -342,7 +349,7 @@ export default function HorariosSection({ technicians }: Props) {
                                         ))}
                                         {esSabado && turnoSabado && (
                                           <option value={turnoSabado.id}>
-                                            8-5 · Trabaja
+                                            {turnoSabado.nombre} · Trabaja
                                           </option>
                                         )}
                                         {!esSabado && (
@@ -368,7 +375,7 @@ export default function HorariosSection({ technicians }: Props) {
           </div>
 
           <p className="text-[11px] text-gray-400">
-              — deja el día en blanco · Sábado: 1 o 2 técnicos con turno 8-5 fijo (sin descanso) · quien trabaja sábado puede descansar un día entre semana (aviso ámbar, no bloquea)
+              — deja el día en blanco · Sábado: 1 o 2 técnicos con el turno fijo del catálogo (sin descanso) · quien trabaja sábado puede descansar un día entre semana (aviso ámbar, no bloquea)
             </p>
         </>
       )}
@@ -422,6 +429,7 @@ function FilaTurnoCatalogo({ turno, onGuardado, onError }: {
   const [inicio, setInicio] = useState(turno?.hora_inicio?.slice(0, 5) || '')
   const [fin, setFin] = useState(turno?.hora_fin?.slice(0, 5) || '')
   const [activo, setActivo] = useState(turno?.activo !== false)
+  const [fijoSabado, setFijoSabado] = useState(turno?.fijo_sabado === true)
   const [guardando, setGuardando] = useState(false)
   const [nuevo, setNuevo] = useState(false)
 
@@ -429,13 +437,13 @@ function FilaTurnoCatalogo({ turno, onGuardado, onError }: {
     if (!nombre.trim() || !inicio || !fin) return
     setGuardando(true)
     try {
-      const payload = { nombre: nombre.trim(), hora_inicio: inicio, hora_fin: fin, activo }
+      const payload = { nombre: nombre.trim(), hora_inicio: inicio, hora_fin: fin, activo, fijo_sabado: fijoSabado }
       const res = turno
         ? await api.horarios.actualizar(turno.id, payload)
         : await api.horarios.crear(payload)
       onGuardado(res)
       if (!turno) {
-        setNombre(''); setInicio(''); setFin(''); setActivo(true)
+        setNombre(''); setInicio(''); setFin(''); setActivo(true); setFijoSabado(false)
       }
     } catch (e) {
       onError((e as Error).message || 'No se pudo guardar el turno')
@@ -453,6 +461,15 @@ function FilaTurnoCatalogo({ turno, onGuardado, onError }: {
           <input type="time" value={inicio} onChange={(e) => setInicio(e.target.value)} className="px-2.5 py-1.5 rounded-lg border-2 border-gray-100 text-xs focus:outline-none focus:border-sena-green" />
           <input type="time" value={fin} onChange={(e) => setFin(e.target.value)} className="px-2.5 py-1.5 rounded-lg border-2 border-gray-100 text-xs focus:outline-none focus:border-sena-green" />
         </div>
+        <label className="flex items-center gap-2 cursor-pointer select-none">
+          <input
+            type="checkbox"
+            checked={fijoSabado}
+            onChange={(e) => setFijoSabado(e.target.checked)}
+            className="rounded border-gray-300 text-sena-green focus:ring-sena-green"
+          />
+          <span className="text-[11px] font-semibold text-gray-600">Turno fijo de sábado</span>
+        </label>
         <div className="flex justify-end gap-2">
           <button onClick={() => setNuevo(false)} className="px-3 py-1.5 rounded-lg text-xs font-semibold text-gray-500 hover:bg-gray-50">Cancelar</button>
           <button onClick={guardar} disabled={guardando || !nombre.trim() || !inicio || !fin} className="px-3 py-1.5 rounded-lg bg-sena-green text-white text-xs font-bold hover:bg-sena-dark disabled:opacity-50 flex items-center gap-1">
@@ -477,7 +494,7 @@ function FilaTurnoCatalogo({ turno, onGuardado, onError }: {
         <div className="flex items-center gap-2">
           <p className="text-sm font-bold text-gray-800">{turno?.nombre}</p>
           {turno && !turno.activo && <span className="text-[10px] font-bold text-gray-400 bg-gray-200 rounded-full px-2 py-0.5">Desactivado</span>}
-          {turno?.nombre === NOMBRE_TURNO_SABADO && (
+          {turno?.fijo_sabado && (
             <span className="text-[10px] font-bold text-orange-600 bg-orange-50 border border-orange-200 rounded-full px-2 py-0.5">Turno del sábado</span>
           )}
         </div>
@@ -492,6 +509,17 @@ function FilaTurnoCatalogo({ turno, onGuardado, onError }: {
           </button>
         )}
       </div>
+      <label className="flex items-center gap-2 cursor-pointer select-none">
+        <input
+          type="checkbox"
+          checked={fijoSabado}
+          onChange={(e) => setFijoSabado(e.target.checked)}
+          className="rounded border-gray-300 text-sena-green focus:ring-sena-green"
+        />
+        <span className="text-[11px] font-semibold text-gray-600">
+          Turno fijo de sábado <span className="text-gray-400 font-normal">(el único asignable al sábado)</span>
+        </span>
+      </label>
       <div className="grid grid-cols-3 gap-2">
         <input value={nombre} onChange={(e) => setNombre(e.target.value)} placeholder="Nombre (ej. 6-2)" className="px-2.5 py-1.5 rounded-lg border-2 border-gray-100 text-xs focus:outline-none focus:border-sena-green" />
         <input type="time" value={inicio} onChange={(e) => setInicio(e.target.value)} className="px-2.5 py-1.5 rounded-lg border-2 border-gray-100 text-xs focus:outline-none focus:border-sena-green" />

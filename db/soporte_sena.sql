@@ -203,6 +203,7 @@ CREATE TABLE `horarios` (
   `hora_inicio` time NOT NULL,
   `hora_fin` time NOT NULL,
   `activo` tinyint(1) NOT NULL DEFAULT 1,
+  `fijo_sabado` tinyint(1) NOT NULL DEFAULT 0,
   `created_at` timestamp NOT NULL DEFAULT current_timestamp(),
   `updated_at` timestamp NOT NULL DEFAULT current_timestamp() ON UPDATE current_timestamp(),
   PRIMARY KEY (`id`)
@@ -215,7 +216,7 @@ CREATE TABLE `horarios` (
 
 LOCK TABLES `horarios` WRITE;
 /*!40000 ALTER TABLE `horarios` DISABLE KEYS */;
-INSERT INTO `horarios` VALUES (1,'6-2','06:00:00','14:00:00',1,'2026-08-18 15:54:02','2026-08-18 15:54:02'),(2,'7-4','07:00:00','16:00:00',1,'2026-08-18 15:54:02','2026-08-18 15:54:02'),(3,'8-5','08:00:00','17:00:00',1,'2026-08-18 15:54:02','2026-08-18 15:54:02'),(4,'8-4','08:00:00','16:00:00',1,'2026-08-18 15:54:02','2026-08-18 15:54:02'),(5,'2-9','14:00:00','21:00:00',1,'2026-08-18 15:54:02','2026-08-18 15:54:02');
+INSERT INTO `horarios` VALUES (1,'6-2','06:00:00','14:00:00',1,0,'2026-08-18 15:54:02','2026-08-18 15:54:02'),(2,'7-4','07:00:00','16:00:00',1,0,'2026-08-18 15:54:02','2026-08-18 15:54:02'),(3,'8-5','08:00:00','17:00:00',1,0,'2026-08-18 15:54:02','2026-08-18 15:54:02'),(4,'8-4','08:00:00','16:00:00',1,1,'2026-08-18 15:54:02','2026-08-18 15:54:02'),(5,'2-9','14:00:00','21:00:00',1,0,'2026-08-18 15:54:02','2026-08-18 15:54:02');
 /*!40000 ALTER TABLE `horarios` ENABLE KEYS */;
 UNLOCK TABLES;
 
