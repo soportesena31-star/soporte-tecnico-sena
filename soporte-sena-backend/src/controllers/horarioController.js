@@ -2,6 +2,7 @@ const { sequelize, Horario, HorarioTecnico, Usuario, Role } = require('../models
 const { Op } = require('sequelize');
 const { successResponse, errorResponse } = require('../utils/response');
 const { ERR_NOT_FOUND, ERR_VALIDATION } = require('../utils/errorCodes');
+const { publicar: publicarEvento } = require('../services/eventBus');
 
 // El sabado lo cubren minimo 1 y maximo 2 tecnicos con el turno fijo de
 // sabado (fijo_sabado=true en el catalogo, por defecto el 8-4). Aqui se hace
@@ -39,6 +40,7 @@ async function crearHorario(req, res, next) {
     }, { transaction });
 
     await transaction.commit();
+    publicarEvento('horario_actualizado', { tipo: 'catalogo' });
     return successResponse(res, 201, horario, 'Turno creado');
   } catch (err) {
     await transaction.rollback();
@@ -69,6 +71,7 @@ async function actualizarHorario(req, res, next) {
 
     await horario.update(cambios, { transaction });
     await transaction.commit();
+    publicarEvento('horario_actualizado', { tipo: 'catalogo' });
     return successResponse(res, 200, horario, 'Turno actualizado');
   } catch (err) {
     await transaction.rollback();
@@ -255,6 +258,7 @@ async function guardarTecnicoSemana(req, res, next) {
     }
 
     await transaction.commit();
+    publicarEvento('horario_actualizado', { tipo: 'semana', tecnico_id: tecnico.id, semana });
 
     const filas = await HorarioTecnico.findAll({
       where: { tecnico_id: tecnico.id, semana },

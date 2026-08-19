@@ -11,6 +11,15 @@ function difundirCambioDeCaso() {
   window.dispatchEvent(new Event(EVENTO_CASO_ACTUALIZADO))
 }
 
+// Evento global que avisa a las paginas cuando el backend publica un cambio
+// de horarios (semana guardada o catalogo de turnos editado) por el stream
+// SSE. Las paginas se suscriben con useHorarioActualizado() para recargar.
+export const EVENTO_HORARIO_ACTUALIZADO = 'soporte:horario_actualizado'
+
+function difundirCambioDeHorario() {
+  window.dispatchEvent(new Event(EVENTO_HORARIO_ACTUALIZADO))
+}
+
 // Clave publica VAPID (solo lectura). Se define en Railway como VITE_VAPID_PUBLIC_KEY.
 const VAPID_PUBLIC = import.meta.env.VITE_VAPID_PUBLIC_KEY || ''
 
@@ -168,6 +177,12 @@ export function useAlertas() {
       // recarguen en vivo sin recargar el navegador.
       es.addEventListener('caso_actualizado', () => {
         difundirCambioDeCaso()
+      })
+
+      // Cambios de horario (el admin guarda la semana de un tecnico o edita
+      // el catalogo de turnos): los paneles abiertos recargan en vivo.
+      es.addEventListener('horario_actualizado', () => {
+        difundirCambioDeHorario()
       })
 
       es.onerror = () => {

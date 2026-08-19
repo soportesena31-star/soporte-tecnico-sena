@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react'
+import { useCallback, useEffect, useRef, useState } from 'react'
 import {
   Home, ListChecks, Briefcase, Bell, User,
   MapPin, Tag, Clock, AlertTriangle, ChevronRight,
@@ -7,6 +7,7 @@ import {
 } from 'lucide-react'
 import { STATUS_COLORS, PRIORITY_COLORS, formatDate, type Case } from '../data/mockData'
 import { api } from '../api/client'
+import { useHorarioActualizado } from '../hooks/useHorarioActualizado'
 
 type Tab = 'home' | 'cases' | 'my-cases' | 'notifications' | 'profile'
 type Filter = 'Todos' | 'Nuevos' | 'Alta' | 'Mis casos' | 'En proceso'
@@ -63,19 +64,35 @@ export default function TechnicianDashboard({ techName, techEmail, cases, curren
   const [horarioError, setHorarioError] = useState('')
   const [horarioDetalle, setHorarioDetalle] = useState(false)
 
-  // Carga la semana en curso del tecnico para mostrarla en su perfil.
-  useEffect(() => {
+  // Carga la semana en curso del tecnico para mostrarla en su perfil. La
+  // guardia de secuencia evita que una carga vieja pise a una mas reciente
+  // cuando varias se superponen (evento SSE + montaje inicial).
+  const cargaSeq = useRef(0)
+  const cargarMiSemana = useCallback(async () => {
+    const seq = ++cargaSeq.current
     const hoy = new Date()
     const lunes = new Date(hoy)
     lunes.setDate(hoy.getDate() - ((hoy.getDay() + 6) % 7))
     const y = lunes.getFullYear()
     const m = String(lunes.getMonth() + 1).padStart(2, '0')
     const d = String(lunes.getDate()).padStart(2, '0')
-    api.horariosTecnicos.miSemana(`${y}-${m}-${d}`)
-      .then((r) => setMiSemana(r))
+    const r = await api.horariosTecnicos.miSemana(`${y}-${m}-${d}`)
+    if (seq === cargaSeq.current) setMiSemana(r)
+  }, [])
+
+  useEffect(() => {
+    cargarMiSemana()
       .catch((e) => setHorarioError((e as Error).message || 'No se pudo cargar tu horario'))
       .finally(() => setHorarioCargando(false))
-  }, [])
+  }, [cargarMiSemana])
+
+  // Refresca en vivo cuando el admin guarda horarios o edita el catalogo de
+  // turnos (evento SSE horario_actualizado). El error se ignora: se conserva
+  // el horario actual y el proximo evento (o recarga manual) lo actualiza.
+  const refrescarHorario = useCallback(() => {
+    cargarMiSemana().catch(() => {})
+  }, [cargarMiSemana])
+  useHorarioActualizado(refrescarHorario)
 
   const firstName = techName.split(' ')[0]
   const initials = techName.split(' ').map(n => n[0]).join('').slice(0, 2)
