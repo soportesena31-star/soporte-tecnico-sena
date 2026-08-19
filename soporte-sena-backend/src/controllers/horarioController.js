@@ -89,6 +89,46 @@ async function obtenerGrilla(req, res, next) {
   }
 }
 
+// Lunes de la semana en curso (formato YYYY-MM-DD): la semana laboral del
+// tecnico empieza en lunes, igual que en el panel del administrador.
+function semanaActual() {
+  const hoy = new Date();
+  const lunes = new Date(hoy);
+  lunes.setDate(hoy.getDate() - ((hoy.getDay() + 6) % 7));
+  const y = lunes.getFullYear();
+  const m = String(lunes.getMonth() + 1).padStart(2, '0');
+  const d = String(lunes.getDate()).padStart(2, '0');
+  return `${y}-${m}-${d}`;
+}
+
+// Semana del tecnico logueado (su perfil): devuelve SOLO sus dias guardados.
+// Si no se pasa ?semana= usa la semana en curso.
+async function obtenerMiSemana(req, res, next) {
+  try {
+    const { semana } = req.query;
+    const semanaFinal = semana && /^\d{4}-\d{2}-\d{2}$/.test(semana) ? semana : semanaActual();
+
+    const filas = await HorarioTecnico.findAll({
+      where: { tecnico_id: req.usuario.id, semana: semanaFinal },
+      include: [{ model: Horario, as: 'horario', attributes: ['id', 'nombre', 'hora_inicio', 'hora_fin'] }],
+      order: [['dia_semana', 'ASC']],
+    });
+
+    const dias = filas.map((f) => ({
+      dia_semana: f.dia_semana,
+      horario_id: f.horario_id,
+      horario_nombre: f.horario?.nombre || null,
+      hora_inicio: f.horario?.hora_inicio || null,
+      hora_fin: f.horario?.hora_fin || null,
+      descanso: f.descanso,
+    }));
+
+    return successResponse(res, 200, { semana: semanaFinal, dias });
+  } catch (err) {
+    next(err);
+  }
+}
+
 // Guarda (o reemplaza) la semana de UN tecnico. El payload trae los dias
 // completos L-D; los dias que no vengan se eliminan para esa semana/tecnico,
 // asi el guardado es idempotente y el panel puede editar celda por celda.
@@ -193,4 +233,4 @@ async function guardarTecnicoSemana(req, res, next) {
   }
 }
 
-module.exports = { listarHorarios, crearHorario, actualizarHorario, obtenerGrilla, guardarTecnicoSemana };
+module.exports = { listarHorarios, crearHorario, actualizarHorario, obtenerGrilla, guardarTecnicoSemana, obtenerMiSemana };

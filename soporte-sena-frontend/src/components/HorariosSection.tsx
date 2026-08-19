@@ -218,7 +218,7 @@ export default function HorariosSection({ technicians }: Props) {
   }
 
   return (
-    <div className="space-y-4">
+    <div className="flex flex-col gap-4 h-full min-h-0">
       {/* Header: titulo + navegacion de semanas + catalogo */}
       <div className="flex flex-col sm:flex-row gap-3 items-stretch sm:items-center justify-between">
         <div className="flex items-center gap-3">
@@ -264,9 +264,11 @@ export default function HorariosSection({ technicians }: Props) {
             </div>
           )}
 
-          {/* Tabla semanal */}
-          <div className="bg-white rounded-2xl border border-gray-100 overflow-hidden">
-            <div className="overflow-x-auto">
+          {/* Tabla semanal: la tarjeta llena el alto disponible (flex-1) y NO usa
+              overflow-hidden, para que el menu del select de la ultima fila
+              pueda desplegarse hacia abajo sin quedar recortado. */}
+          <div className="bg-white rounded-2xl border border-gray-100 flex-1 min-h-0 flex flex-col">
+            <div className="overflow-x-auto rounded-t-2xl">
               <table className="w-full text-sm">
                 <thead>
                   <tr className="bg-gray-50 border-b border-gray-100">

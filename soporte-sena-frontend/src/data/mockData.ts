@@ -1,6 +1,6 @@
 export type CaseStatus = 'Abierto' | 'Asignado' | 'En proceso' | 'Resuelto' | 'Cerrado' | 'Reabierto'
 export type Priority = 'Baja' | 'Media' | 'Alta'
-export type SpaceType = 'Ambiente' | 'Almacén' | 'Auditorio' | 'Oficina' | 'Zona común' | 'Otro'
+export type SpaceType = 'Ambiente' | 'Laboratorio' | 'Auditorio' | 'Oficina' | 'Zona común' | 'Otro'
 export type NoveltyType = 'Equipos de cómputo' | 'Conectividad / Red' | 'Mobiliario' | 'Eléctrico' | 'Audiovisuales' | 'Climatización' | 'Otro'
 
 export interface Space {
@@ -49,26 +49,6 @@ export interface Case {
   reopenCount?: number
   timeline: CaseEvent[]
 }
-
-export const PRIORITY_DEFAULTS: Record<NoveltyType, Priority> = {
-  'Equipos de cómputo': 'Media',
-  'Conectividad / Red': 'Media',
-  'Mobiliario': 'Baja',
-  'Eléctrico': 'Alta',
-  'Audiovisuales': 'Media',
-  'Climatización': 'Media',
-  'Otro': 'Baja',
-}
-
-export const NOVELTY_TYPES: NoveltyType[] = [
-  'Equipos de cómputo',
-  'Conectividad / Red',
-  'Mobiliario',
-  'Eléctrico',
-  'Audiovisuales',
-  'Climatización',
-  'Otro',
-]
 
 export const STATUS_COLORS: Record<CaseStatus, { bg: string; text: string; dot: string }> = {
   'Abierto': { bg: 'bg-blue-50', text: 'text-blue-700', dot: 'bg-blue-500' },

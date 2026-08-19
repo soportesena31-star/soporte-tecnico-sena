@@ -1,14 +1,44 @@
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import {
   Home, ListChecks, Briefcase, Bell, User,
   MapPin, Tag, Clock, AlertTriangle, ChevronRight,
   CheckCircle2, Zap, TrendingUp, ArrowRight, Star,
-  Search, CircleDot, Mail
+  Search, CircleDot, Mail, CalendarDays, Loader2
 } from 'lucide-react'
 import { STATUS_COLORS, PRIORITY_COLORS, formatDate, type Case } from '../data/mockData'
+import { api } from '../api/client'
 
 type Tab = 'home' | 'cases' | 'my-cases' | 'notifications' | 'profile'
 type Filter = 'Todos' | 'Nuevos' | 'Alta' | 'Mis casos' | 'En proceso'
+
+/** Dia guardado de la semana del tecnico (respuesta de /horarios/mi-semana). */
+interface DiaHorario {
+  dia_semana: number
+  horario_id: number | null
+  horario_nombre: string | null
+  hora_inicio: string | null
+  hora_fin: string | null
+  descanso: boolean
+}
+
+const DIAS_SEMANA = [
+  { n: 1, label: 'Lu', full: 'Lunes' },
+  { n: 2, label: 'Ma', full: 'Martes' },
+  { n: 3, label: 'Mi', full: 'Miércoles' },
+  { n: 4, label: 'Ju', full: 'Jueves' },
+  { n: 5, label: 'Vi', full: 'Viernes' },
+  { n: 6, label: 'Sá', full: 'Sábado' },
+]
+
+const turnoColor = (n: string | null) => {
+  if (!n) return ''
+  if (n.startsWith('6-2')) return 'bg-emerald-100 text-emerald-700 border-emerald-200'
+  if (n.startsWith('7-4')) return 'bg-sky-100 text-sky-700 border-sky-200'
+  if (n.startsWith('8-5')) return 'bg-orange-100 text-orange-700 border-orange-200'
+  return 'bg-indigo-100 text-indigo-700 border-indigo-200'
+}
+
+const horaCorta = (h: string | null) => (h ? h.slice(0, 5) : '')
 
 interface Props {
   techName: string
@@ -28,6 +58,24 @@ export default function TechnicianDashboard({ techName, techEmail, cases, curren
   const [search, setSearch] = useState('')
   const [profileOpen, setProfileOpen] = useState(false)
   const [readNotifs, setReadNotifs] = useState<string[]>([])
+  const [miSemana, setMiSemana] = useState<{ semana: string; dias: DiaHorario[] } | null>(null)
+  const [horarioCargando, setHorarioCargando] = useState(true)
+  const [horarioError, setHorarioError] = useState('')
+  const [horarioDetalle, setHorarioDetalle] = useState(false)
+
+  // Carga la semana en curso del tecnico para mostrarla en su perfil.
+  useEffect(() => {
+    const hoy = new Date()
+    const lunes = new Date(hoy)
+    lunes.setDate(hoy.getDate() - ((hoy.getDay() + 6) % 7))
+    const y = lunes.getFullYear()
+    const m = String(lunes.getMonth() + 1).padStart(2, '0')
+    const d = String(lunes.getDate()).padStart(2, '0')
+    api.horariosTecnicos.miSemana(`${y}-${m}-${d}`)
+      .then((r) => setMiSemana(r))
+      .catch((e) => setHorarioError((e as Error).message || 'No se pudo cargar tu horario'))
+      .finally(() => setHorarioCargando(false))
+  }, [])
 
   const firstName = techName.split(' ')[0]
   const initials = techName.split(' ').map(n => n[0]).join('').slice(0, 2)
@@ -407,11 +455,118 @@ export default function TechnicianDashboard({ techName, techEmail, cases, curren
               </div>
             </div>
 
+            {/* Mi horario de la semana */}
+            <div className="px-5 mb-5">
+              <button
+                onClick={() => setHorarioDetalle(true)}
+                disabled={!miSemana || horarioCargando || !!horarioError}
+                className="w-full text-left bg-gray-50 rounded-2xl p-4 hover:bg-gray-100 transition-colors active:scale-[0.99] disabled:opacity-60 disabled:active:scale-100"
+              >
+                <div className="flex items-center gap-2 mb-3">
+                  <CalendarDays size={14} className="text-sena-green" />
+                  <p className="text-xs font-bold text-gray-700">Mi horario</p>
+                  {miSemana && (
+                    <span className="ml-auto text-[10px] text-gray-400">
+                      {new Date(`${miSemana.semana}T00:00:00`).toLocaleDateString('es-CO', { day: 'numeric', month: 'short' })}
+                    </span>
+                  )}
+                </div>
+                {horarioCargando ? (
+                  <div className="flex items-center gap-1.5 text-[11px] text-gray-400">
+                    <Loader2 size={11} className="animate-spin" /> Cargando...
+                  </div>
+                ) : horarioError ? (
+                  <p className="text-[11px] text-gray-400">{horarioError}</p>
+                ) : (
+                  <>
+                    <div className="grid grid-cols-6 gap-1.5">
+                      {DIAS_SEMANA.map((d) => {
+                        const fila = miSemana?.dias.find((f) => f.dia_semana === d.n)
+                        const nombre = fila?.descanso ? null : fila?.horario_nombre || null
+                        return (
+                          <div
+                            key={d.n}
+                            className={`rounded-lg border px-0.5 py-1.5 text-center ${
+                              fila?.descanso
+                                ? 'bg-gray-200/70 border-gray-200 text-gray-500'
+                                : nombre
+                                  ? turnoColor(nombre)
+                                  : 'border-dashed border-gray-300 text-gray-400'
+                            }`}
+                          >
+                            <p className="text-[8px] font-bold opacity-60">{d.label}</p>
+                            <p className="text-[10px] font-black leading-tight">{fila?.descanso ? 'Des' : nombre || '—'}</p>
+                          </div>
+                        )
+                      })}
+                    </div>
+                    <p className="text-[10px] text-gray-400 mt-2 flex items-center gap-1">
+                      Ver detalle <ChevronRight size={10} />
+                    </p>
+                  </>
+                )}
+              </button>
+            </div>
+
             {/* Actions */}
             <div className="px-5 space-y-2">
               <button onClick={() => { setProfileOpen(false); onLogout() }} className="w-full py-3.5 rounded-2xl border-2 border-red-100 text-red-600 font-bold text-sm hover:bg-red-50 transition-colors">
                 Cerrar sesión
               </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* ── HORARIO DETALLE ── */}
+      {horarioDetalle && miSemana && (
+        <div className="fixed inset-0 bg-black/50 z-[60] flex items-end" onClick={() => setHorarioDetalle(false)}>
+          <div className="bg-white w-full rounded-t-3xl pb-8 max-w-lg mx-auto" onClick={(e) => e.stopPropagation()}>
+            <div className="w-12 h-1 bg-gray-200 rounded-full mx-auto mt-4 mb-6" />
+            <div className="px-5 mb-4">
+              <div className="flex items-center gap-2">
+                <CalendarDays size={16} className="text-sena-green" />
+                <p className="font-black text-gray-900">Mi horario</p>
+                <span className="ml-auto text-xs text-gray-400">
+                  {new Date(`${miSemana.semana}T00:00:00`).toLocaleDateString('es-CO', { day: 'numeric', month: 'long' })}
+                </span>
+              </div>
+            </div>
+            <div className="px-5 space-y-2">
+              {DIAS_SEMANA.map((d) => {
+                const fila = miSemana.dias.find((f) => f.dia_semana === d.n)
+                const nombre = fila?.descanso ? 'Descanso' : fila?.horario_nombre || null
+                const horas = fila?.horario_nombre && !fila.descanso
+                  ? `${horaCorta(fila.hora_inicio)} – ${horaCorta(fila.hora_fin)}`
+                  : null
+                return (
+                  <div
+                    key={d.n}
+                    className={`flex items-center gap-3 rounded-2xl border px-4 py-3 ${
+                      fila?.descanso
+                        ? 'bg-gray-50 border-gray-100'
+                        : nombre
+                          ? `border-transparent ${turnoColor(nombre)}`
+                          : 'bg-gray-50 border-dashed border-gray-200'
+                    }`}
+                  >
+                    <p className="w-20 text-xs font-bold text-gray-700">{d.full}</p>
+                    {nombre ? (
+                      <>
+                        <span className="text-xs font-black">{nombre}</span>
+                        {horas && <span className="ml-auto text-[11px] font-semibold opacity-60">{horas}</span>}
+                      </>
+                    ) : (
+                      <span className="text-xs text-gray-400">Sin definir</span>
+                    )}
+                  </div>
+                )
+              })}
+              {miSemana.dias.length === 0 && (
+                <p className="text-center text-xs text-gray-400 py-6">
+                  Tu horario de esta semana aún no está definido
+                </p>
+              )}
             </div>
           </div>
         </div>

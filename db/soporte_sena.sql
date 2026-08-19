@@ -167,7 +167,7 @@ DROP TABLE IF EXISTS `historial_casos`;
 CREATE TABLE `historial_casos` (
   `id` int(10) unsigned NOT NULL AUTO_INCREMENT,
   `caso_id` int(10) unsigned NOT NULL,
-  `accion` enum('creado','asignado','en_proceso','nota','resuelto','cerrado','reabierto') NOT NULL,
+  `accion` enum('creado','asignado','en_proceso','nota','resuelto','cerrado','reabierto','reasignado') NOT NULL,
   `usuario_id` int(10) unsigned DEFAULT NULL COMMENT 'NULL cuando la accion la origina quien reporta, sin cuenta',
   `detalle` text DEFAULT NULL,
   `created_at` timestamp NOT NULL DEFAULT current_timestamp(),

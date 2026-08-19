@@ -332,26 +332,39 @@ async function reasignarCaso(req, res, next) {
     // Ojo: capturar el tecnico anterior ANTES del update (previous() de Sequelize
     // ya devolveria el valor nuevo tras update()).
     const tecnicoAnteriorId = caso.tecnico_id;
-    await caso.update({
-      tecnico_id: tecnicoNuevo.id,
-      fecha_asignacion: new Date(),
-    });
 
-    const tecnicoAnterior = tecnicoAnteriorId
-      ? await Usuario.findByPk(tecnicoAnteriorId, { attributes: ['nombre'] })
-      : null;
+    // Transaccion: el cambio de asignacion y su historial son atomicos.
+    const t = await sequelize.transaction();
+    try {
+      await caso.update(
+        { tecnico_id: tecnicoNuevo.id, fecha_asignacion: new Date() },
+        { transaction: t },
+      );
 
-    const partes = [
-      `Reasignado de ${tecnicoAnterior?.nombre || 'sin tecnico'} a ${tecnicoNuevo.nombre}`,
-    ];
-    if (motivo && motivo.trim()) partes.push(`Motivo: ${motivo.trim()}`);
+      const tecnicoAnterior = tecnicoAnteriorId
+        ? await Usuario.findByPk(tecnicoAnteriorId, { attributes: ['nombre'] })
+        : null;
 
-    await HistorialCaso.create({
-      caso_id: caso.id,
-      accion: 'reasignado',
-      usuario_id: req.usuario.id,
-      detalle: partes.join(' | '),
-    });
+      const partes = [
+        `Reasignado de ${tecnicoAnterior?.nombre || 'sin tecnico'} a ${tecnicoNuevo.nombre}`,
+      ];
+      if (motivo && motivo.trim()) partes.push(`Motivo: ${motivo.trim()}`);
+
+      await HistorialCaso.create(
+        {
+          caso_id: caso.id,
+          accion: 'reasignado',
+          usuario_id: req.usuario.id,
+          detalle: partes.join(' | '),
+        },
+        { transaction: t },
+      );
+
+      await t.commit();
+    } catch (err) {
+      await t.rollback();
+      throw err;
+    }
 
     const casoActualizado = await Caso.findByPk(caso.id, {
       include: [

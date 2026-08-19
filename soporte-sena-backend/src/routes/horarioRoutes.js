@@ -3,6 +3,7 @@ const express = require('express');
 const router = express.Router();
 const {
   listarHorarios, crearHorario, actualizarHorario, obtenerGrilla, guardarTecnicoSemana,
+  obtenerMiSemana,
 } = require('../controllers/horarioController');
 const {
   crearHorarioValidator, actualizarHorarioValidator, guardarTecnicoSemanaValidator,
@@ -19,5 +20,7 @@ router.post('/', requireAuth, requireRol('administrador'), crearHorarioValidator
 router.put('/:id', requireAuth, requireRol('administrador'), actualizarHorarioValidator, validate, actualizarHorario);
 router.get('/tecnicos', requireAuth, requireRol('administrador'), obtenerGrilla);
 router.put('/tecnicos/:tecnicoId', requireAuth, requireRol('administrador'), guardarTecnicoSemanaValidator, validate, guardarTecnicoSemana);
+// Perfil del tecnico: su propia semana (cualquier usuario autenticado ve la suya).
+router.get('/mi-semana', requireAuth, obtenerMiSemana);
 
 module.exports = router;

@@ -11,7 +11,6 @@ export default function Login({ onSubmit, onBack, onForgotPassword }: Props) {
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
   const [showPass, setShowPass] = useState(false)
-  const [remember, setRemember] = useState(false)
   const [error, setError] = useState('')
   const [loading, setLoading] = useState(false)
 
@@ -84,10 +83,6 @@ export default function Login({ onSubmit, onBack, onForgotPassword }: Props) {
             </div>
 
             <div className="flex items-center justify-between">
-              <label className="flex items-center gap-2 cursor-pointer">
-                <input type="checkbox" checked={remember} onChange={e => setRemember(e.target.checked)} className="rounded border-gray-300 text-sena-green focus:ring-sena-green" />
-                <span className="text-xs text-gray-600">Recordarme</span>
-              </label>
               <button type="button" onClick={onForgotPassword} className="text-xs text-sena-green font-semibold hover:underline">
                 Recuperar contraseña
               </button>

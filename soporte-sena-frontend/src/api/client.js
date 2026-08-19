@@ -91,7 +91,6 @@ export const api = {
     asignar: (id, tecnico_id) => request(`/casos/${id}/asignar`, { method: 'POST', body: { tecnico_id } }),
     reasignar: (id, tecnico_id, motivo) => request(`/casos/${id}/reasignar`, { method: 'POST', body: { tecnico_id, motivo } }),
     iniciar: (id) => request(`/casos/${id}/iniciar`, { method: 'POST' }),
-    agregarNota: (id, nota) => request(`/casos/${id}/notas`, { method: 'POST', body: { nota } }),
     resolver: (id, formData) => request(`/casos/${id}/resolver`, { method: 'POST', body: formData }),
     cerrar: (id) => request(`/casos/${id}/cerrar`, { method: 'POST' }),
     reabrir: (id, motivo) => request(`/casos/${id}/reabrir`, { method: 'POST', body: { motivo } }),
@@ -117,7 +116,6 @@ export const api = {
   },
   push: {
     suscribir: (datos) => request('/push/suscribir', { method: 'POST', body: datos }),
-    desuscribir: (endpoint) => request('/push/desuscribir', { method: 'POST', body: { endpoint } }),
   },
   qr: {
     obtener: () => request('/qr'),
@@ -143,6 +141,7 @@ export const api = {
   horariosTecnicos: {
     grilla: (semana) => request('/horarios/tecnicos', { query: { semana } }),
     guardarTecnico: (tecnicoId, datos) => request(`/horarios/tecnicos/${tecnicoId}`, { method: 'PUT', body: datos }),
+    miSemana: (semana) => request('/horarios/mi-semana', { query: { semana } }),
   },
   historial: {
     listar: (query) => request('/historial', { query }),

@@ -25,8 +25,6 @@ export const TIPO_ESPACIO_DISPLAY = {
   oficina: 'Oficina',
   zona_comun: 'Zona común',
   otro: 'Otro',
-  ambiente: 'Ambiente',
-  almacen: 'Almacén',
 };
 
 const TIPO_ESPACIO_API = Object.fromEntries(

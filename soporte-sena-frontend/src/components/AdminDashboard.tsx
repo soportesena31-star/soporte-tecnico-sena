@@ -111,7 +111,7 @@ export default function AdminDashboard({ onLogout, adminName, cases, spaces, tec
   }
 
   return (
-    <div className="min-h-screen bg-[#F0F2F5] flex">
+    <div className="h-screen bg-[#F0F2F5] flex overflow-hidden">
       {sidebarOpen && (
         <div className="fixed inset-0 bg-black/50 z-40 lg:hidden" onClick={() => setSidebarOpen(false)} />
       )}
@@ -1034,7 +1034,7 @@ function SpacesSection({ spaces, cases, onCreateSpace, onUpdateSpace }: { spaces
     <div className="space-y-4">
       {/* Summary cards */}
       <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-3">
-        {['Ambiente', 'Almacén', 'Auditorio', 'Oficina', 'Zona común', 'Otro'].map(t => (
+        {['Ambiente', 'Laboratorio', 'Auditorio', 'Oficina', 'Zona común', 'Otro'].map(t => (
           <button key={t} onClick={() => setTypeFilter(typeFilter === t ? 'Todos' : t)}
             className={`bg-white rounded-xl p-3 border text-center transition-all hover:shadow-md ${typeFilter === t ? 'border-sena-green shadow-sm' : 'border-gray-100'}`}>
             <p className={`text-2xl font-black ${typeFilter === t ? 'text-sena-green' : 'text-gray-900'}`}>{typeCount[t] || 0}</p>
@@ -1050,7 +1050,7 @@ function SpacesSection({ spaces, cases, onCreateSpace, onUpdateSpace }: { spaces
             <input value={search} onChange={e => setSearch(e.target.value)} placeholder="Buscar espacio o sede..." className="w-full pl-9 pr-4 py-2.5 rounded-xl border border-gray-200 text-sm focus:outline-none focus:ring-2 focus:ring-sena-green/20 focus:border-sena-green" />
           </div>
           <select value={typeFilter} onChange={e => setTypeFilter(e.target.value)} className="px-3 py-2.5 rounded-xl border border-gray-200 text-sm bg-white focus:outline-none focus:ring-2 focus:ring-sena-green/20">
-            {['Todos', 'Ambiente', 'Almacén', 'Auditorio', 'Oficina', 'Zona común', 'Otro'].map(t => <option key={t}>{t}</option>)}
+            {['Todos', 'Ambiente', 'Laboratorio', 'Auditorio', 'Oficina', 'Zona común', 'Otro'].map(t => <option key={t}>{t}</option>)}
           </select>
         </div>
         <button onClick={() => setShowModal(true)} className="bg-sena-green text-white px-4 py-2.5 rounded-xl text-sm font-bold hover:bg-sena-dark transition-colors flex items-center justify-center gap-2 whitespace-nowrap shadow-md shadow-green-200">
@@ -1118,7 +1118,7 @@ function SpacesSection({ spaces, cases, onCreateSpace, onUpdateSpace }: { spaces
               </FormField>
               <FormField label="Tipo">
                 <select value={newType} onChange={e => setNewType(e.target.value)} className="w-full px-4 py-2.5 rounded-xl border-2 border-gray-100 text-sm bg-white focus:outline-none focus:border-sena-green">
-                  {['Ambiente', 'Almacén', 'Auditorio', 'Oficina', 'Zona común', 'Otro'].map(t => <option key={t}>{t}</option>)}
+                  {['Ambiente', 'Laboratorio', 'Auditorio', 'Oficina', 'Zona común', 'Otro'].map(t => <option key={t}>{t}</option>)}
                 </select>
               </FormField>
               <FormField label="Sede">
@@ -1149,7 +1149,7 @@ function SpacesSection({ spaces, cases, onCreateSpace, onUpdateSpace }: { spaces
               </FormField>
               <FormField label="Tipo">
                 <select value={editType} onChange={e => setEditType(e.target.value)} className="w-full px-4 py-2.5 rounded-xl border-2 border-gray-100 text-sm bg-white focus:outline-none focus:border-sena-green">
-                  {['Ambiente', 'Almacén', 'Auditorio', 'Oficina', 'Zona común', 'Otro'].map(t => <option key={t}>{t}</option>)}
+                  {['Ambiente', 'Laboratorio', 'Auditorio', 'Oficina', 'Zona común', 'Otro'].map(t => <option key={t}>{t}</option>)}
                 </select>
               </FormField>
               <FormField label="Sede">

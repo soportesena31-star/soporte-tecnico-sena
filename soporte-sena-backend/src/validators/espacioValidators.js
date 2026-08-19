@@ -1,6 +1,6 @@
 const { body, param } = require('express-validator');
 
-const TIPOS_VALIDOS = ['aula', 'laboratorio', 'auditorio', 'oficina', 'zona_comun', 'otro', 'ambiente', 'almacen'];
+const TIPOS_VALIDOS = ['aula', 'laboratorio', 'auditorio', 'oficina', 'zona_comun', 'otro'];
 
 const crearEspacioValidator = [
   body('nombre')
