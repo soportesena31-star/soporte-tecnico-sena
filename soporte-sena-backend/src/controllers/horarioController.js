@@ -147,6 +147,9 @@ async function guardarTecnicoSemana(req, res, next) {
           horario_id: { [Op.ne]: null },
           tecnico_id: { [Op.ne]: tecnico.id },
         },
+        // Solo cuentan los tecnicos activos: un tecnico desactivado no se ve
+        // en la grilla del panel y no debe ocupar cupo del sabado.
+        include: [{ model: Usuario, as: 'tecnico', where: { activo: true }, required: true }],
         transaction,
       });
       if (ocupantesSabado >= MAX_TECNICOS_SABADO) {
