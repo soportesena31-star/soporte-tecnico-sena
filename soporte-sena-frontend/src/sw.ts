@@ -67,6 +67,22 @@ self.addEventListener('push', (event) => {
   })())
 })
 
+// Actualizacion automatica: apenas el navegador descarga un sw.js nuevo (cada
+// deploy), el worker nuevo se activa de inmediato y toma el control de todas
+// las pestanas abiertas (skipWaiting + clients.claim). En la pagina, el
+// evento 'controllerchange' de useVersionCheck recarga y queda la version mas
+// reciente, sin depender de que el usuario toque el banner. Sin esto, un SW
+// viejo sigue controlando la sesion entera (p. ej. un tecnico invitado que
+// abre el link del correo con la PWA instalada de visitas previas) y sirve el
+// precache viejo hasta que alguien confirma el banner de actualizacion.
+self.addEventListener('install', () => {
+  self.skipWaiting()
+})
+
+self.addEventListener('activate', () => {
+  self.clients.claim()
+})
+
 // Aviso de nueva version: la app detecta que este SW quedo en 'waiting' y
 // le pide activarse; al activarse se dispara 'controllerchange' y la pagina
 // recarga con la version nueva. Es el mecanismo de actualizacion: el banner
