@@ -94,6 +94,15 @@ export default function TechnicianDashboard({ techName, techEmail, cases, curren
   }, [cargarMiSemana])
   useHorarioActualizado(refrescarHorario)
 
+  // Refresco de robustez: al volver a la app (focus) se recarga el horario
+  // por si el stream SSE se perdio con el telefono en segundo plano; y al
+  // abrir el perfil siempre se trae el dato mas reciente.
+  useEffect(() => {
+    const onFocus = () => refrescarHorario()
+    window.addEventListener('focus', onFocus)
+    return () => window.removeEventListener('focus', onFocus)
+  }, [refrescarHorario])
+
   const firstName = techName.split(' ')[0]
   const initials = techName.split(' ').map(n => n[0]).join('').slice(0, 2)
 
@@ -414,7 +423,7 @@ export default function TechnicianDashboard({ techName, techEmail, cases, curren
           <button
             key={item.id}
             onClick={() => {
-              if (item.id === 'profile') { setProfileOpen(true); return }
+              if (item.id === 'profile') { refrescarHorario(); setProfileOpen(true); return }
               setTab(item.id)
               if (item.id === 'my-cases') setFilter('Mis casos')
             }}
